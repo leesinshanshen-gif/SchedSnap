@@ -207,20 +207,15 @@ Use 24-hour HH:MM format for start/end and 3-letter days: Mon, Tue, Wed, Thu, Fr
 // --- SAMPLE SCHEDULE ---
 sampleBtn.addEventListener("click", () => {
   scheduleData = {
-    institution: "Technological Institute of the Philippines",
-    title: "BS Computer Science — 2nd Semester",
-    meta: "Section CS12S2 • SY 2026–2027",
+    institution: "Sample University",
+    title: "Sample Class Schedule",
+    meta: "Student Name • Section A • Semester 1",
     classes: [
-      { code: "PE 002", title: "PATHFit 2", days: ["Tue"], start: "07:30", end: "09:30", room: "PE CENTER 2F" },
-      { code: "ITE 012", title: "Computer Programming 2", days: ["Mon", "Wed"], start: "08:30", end: "09:30", room: "Q-5312" },
-      { code: "MATH 015", title: "Symbolic Logic", days: ["Mon", "Wed", "Fri"], start: "09:30", end: "10:30", room: "Q-9401" },
-      { code: "MATH 009CS", title: "Probability & Statistics", days: ["Tue"], start: "10:30", end: "12:30", room: "Q-5515" },
-      { code: "MATH 009CS", title: "Probability & Statistics Lab", days: ["Thu"], start: "10:30", end: "13:30", room: "Q-5208" },
-      { code: "GEC 003", title: "The Contemporary World", days: ["Mon", "Wed", "Fri"], start: "11:30", end: "12:30", room: "Q-9410" },
-      { code: "GEC 006", title: "Art Appreciation", days: ["Mon", "Wed", "Fri"], start: "12:30", end: "13:30", room: "Q-9410" },
-      { code: "MATH 007X", title: "Calculus 1", days: ["Tue", "Thu"], start: "13:30", end: "15:00", room: "Q-9401" },
-      { code: "NSTP 002", title: "National Service Training 2", days: ["Wed"], start: "13:30", end: "16:30", room: "AVR BLDG 1,6" },
-      { code: "ITE 012", title: "Computer Programming 2 Lab", days: ["Fri"], start: "13:30", end: "16:30", room: "Q-5313" }
+      { code: "CS 101", title: "Intro to Computing", days: ["Mon", "Wed", "Fri"], start: "09:00", end: "10:00", room: "Room 204" },
+      { code: "MATH 102", title: "College Algebra", days: ["Tue", "Thu"], start: "10:00", end: "11:30", room: "Room 108" },
+      { code: "ENG 101", title: "Academic Writing", days: ["Mon", "Wed"], start: "13:00", end: "14:30", room: "Hall B" },
+      { code: "PHYS 101", title: "General Physics Lab", days: ["Thu"], start: "13:30", end: "16:30", room: "Sci Lab 3" },
+      { code: "PE 101", title: "Physical Fitness", days: ["Fri"], start: "14:00", end: "16:00", room: "Main Gym" }
     ]
   };
   saveAndRender();

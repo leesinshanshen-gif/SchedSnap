@@ -2,20 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SchedSnap — Student Schedule &amp; Timetable Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>SchedSnap — Personalized Visual Schedule Builder</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Poppins:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="design-board.css" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
-  <!-- TOP NAVIGATION -->
+  <!-- TOP NAVIGATION (DESKTOP + COMPACT MOBILE HEADER) -->
   <header class="navbar">
     <div class="navbar-inner">
-      <button type="button" class="brand" id="brandLogo" title="Return to Upload &amp; Scan">
+      <button type="button" class="brand" id="brandLogo" title="Go to Upload Schedule">
         <span class="brand-icon" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="3" />
@@ -27,66 +29,63 @@
         </span>
         <span class="brand-text">
           <span class="brand-name">SchedSnap</span>
-          <span class="brand-tag">Student Timetable</span>
+          <span class="brand-tag">Visual Schedule Studio</span>
         </span>
       </button>
 
-      <nav class="nav-actions" aria-label="Primary actions">
-        <button type="button" id="navUploadBtn" class="btn btn-ghost btn-sm" title="Upload or scan a new schedule">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span>Scan Form</span>
+      <!-- Desktop 5-Section Workflow Nav -->
+      <nav class="desktop-nav" aria-label="Primary navigation">
+        <button type="button" class="nav-tab active" data-nav="upload" id="navUploadBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>1. Upload</span>
         </button>
-        <button type="button" id="navDashboardBtn" class="btn btn-ghost btn-sm hidden" title="View your generated timetable">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-          <span>My Timetable</span>
+        <button type="button" class="nav-tab" data-nav="review" id="navEditBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <span>2. Edit Classes</span>
         </button>
-        <button type="button" id="navExportBtn" class="btn btn-primary btn-sm hidden" title="Download PNG, PDF, or Print">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span>Export</span>
+        <button type="button" class="nav-tab" data-nav="customize" id="navCustomizeBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+          <span>3. Customize</span>
+        </button>
+        <button type="button" class="nav-tab" data-nav="dashboard" id="navPreviewBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          <span>4. Preview</span>
+        </button>
+        <button type="button" class="nav-tab" data-nav="board" id="navBoardBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          <span>5. Design Board</span>
         </button>
       </nav>
+
+      <div class="nav-right-actions">
+        <div class="history-btns" id="historyBtns">
+          <button type="button" id="undoBtn" class="icon-btn" title="Undo design change (Ctrl+Z)" aria-label="Undo" disabled>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+          </button>
+          <button type="button" id="redoBtn" class="icon-btn" title="Redo design change (Ctrl+Y)" aria-label="Redo" disabled>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>
+          </button>
+        </div>
+        <button type="button" id="navExportBtn" class="btn btn-primary btn-sm" title="Export schedule as PNG, PDF, or Print">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Export</span>
+        </button>
+      </div>
     </div>
   </header>
 
   <main class="main-container">
     <!-- ======================================================
-         VIEW 1: UPLOAD & SCAN
+         SECTION 1: UPLOAD SCHEDULE
     ======================================================= -->
     <section id="uploadView" class="view-section">
       <div class="hero-header">
         <div class="hero-pill">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          <span>Smart Schedule Recognition</span>
+          <span>Free Browser OCR • Full Design Studio</span>
         </div>
-        <h1>Turn your enrollment form into a clean timetable</h1>
-        <p class="hero-subtitle">Upload a photo or screenshot of your class schedule. Review extracted courses, detect time conflicts, and export a polished academic timetable.</p>
-      </div>
-
-      <!-- 3-Step Guide -->
-      <div class="steps-bar">
-        <div class="step-item active">
-          <span class="step-num">1</span>
-          <div>
-            <strong>Upload or Snap</strong>
-            <span>JPG, PNG, or camera photo</span>
-          </div>
-        </div>
-        <div class="step-divider"></div>
-        <div class="step-item">
-          <span class="step-num">2</span>
-          <div>
-            <strong>Review &amp; Verify</strong>
-            <span>Check flagged OCR entries</span>
-          </div>
-        </div>
-        <div class="step-divider"></div>
-        <div class="step-item">
-          <span class="step-num">3</span>
-          <div>
-            <strong>Customize &amp; Export</strong>
-            <span>PNG, PDF, or print-ready</span>
-          </div>
-        </div>
+        <h1>Design a class schedule that matches your style</h1>
+        <p class="hero-subtitle">Upload or snap your enrollment form, review detected classes, personalize colors, fonts, templates, and layout in real time, then export as PNG or PDF.</p>
       </div>
 
       <!-- Upload Card -->
@@ -99,18 +98,18 @@
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
           </div>
-          <h3>Drag &amp; drop your enrollment form here</h3>
-          <p class="drop-hint">Supports JPG, JPEG, PNG, and WebP screenshots or photos</p>
+          <h3>Upload or snap your enrollment form</h3>
+          <p class="drop-hint">Tap below on mobile or drag &amp; drop a JPG, PNG, or WebP image on desktop</p>
 
           <div class="upload-btn-row">
-            <label class="btn btn-primary">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span>Browse Files</span>
+            <label class="btn btn-primary btn-touch">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span>Choose from Gallery</span>
               <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/*" hidden />
             </label>
 
-            <label class="btn btn-secondary">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <label class="btn btn-secondary btn-touch">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
               <span>Take a Photo</span>
               <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden />
             </label>
@@ -143,14 +142,10 @@
                 <span>Right</span>
               </button>
               <label class="btn btn-ghost btn-sm" title="Replace image">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span>Replace</span>
                 <input type="file" id="replaceFileInput" accept="image/jpeg,image/png,image/webp,image/*" hidden />
               </label>
-              <button type="button" id="removeImgBtn" class="btn btn-ghost btn-sm text-danger" title="Remove image">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-                <span>Remove</span>
-              </button>
+              <button type="button" id="removeImgBtn" class="btn btn-ghost btn-sm text-danger" title="Remove image">Remove</button>
             </div>
           </div>
 
@@ -159,11 +154,8 @@
           </div>
 
           <div class="preview-footer">
-            <p class="tip-inline">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-              Make sure the text is upright before scanning for best accuracy.
-            </p>
-            <button type="button" id="scanBtn" class="btn btn-primary btn-lg">
+            <p class="tip-inline">Rotate the image upright before scanning for best accuracy.</p>
+            <button type="button" id="scanBtn" class="btn btn-primary btn-touch">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
               <span>Scan &amp; Extract Schedule</span>
             </button>
@@ -174,7 +166,7 @@
         <div id="loadingPanel" class="loading-panel hidden" aria-live="polite">
           <div class="spinner-ring"></div>
           <h3 id="loadingTitle">Analyzing your schedule…</h3>
-          <p id="loadingSubtitle" class="muted">Extracting course codes, meeting days, times, and classrooms.</p>
+          <p id="loadingSubtitle" class="muted">Running 100% in your browser — no API key needed.</p>
           <div class="skeleton-list">
             <div class="skeleton-row"></div>
             <div class="skeleton-row"></div>
@@ -184,7 +176,6 @@
 
         <!-- Error Panel -->
         <div id="scanErrorPanel" class="alert-box alert-danger hidden" role="alert">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <div class="alert-content">
             <strong>Could not process schedule image</strong>
             <p id="scanErrorMessage">Please check the image clarity or try again.</p>
@@ -197,229 +188,540 @@
       <div id="savedBanner" class="saved-banner hidden">
         <div class="saved-banner-info">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          <span>You have a saved schedule in this browser.</span>
+          <span>You have a saved timetable ready to edit or customize.</span>
         </div>
-        <button type="button" id="openSavedBtn" class="btn btn-secondary btn-sm">Open Saved Timetable →</button>
+        <div class="saved-banner-actions">
+          <button type="button" id="openSavedCustomizeBtn" class="btn btn-secondary btn-sm">Customize Design</button>
+          <button type="button" id="openSavedBtn" class="btn btn-primary btn-sm">Open Timetable →</button>
+        </div>
+      </div>
+
+      <!-- Ready-Made Templates Showcase on Home -->
+      <div class="home-templates-section">
+        <div class="home-templates-head">
+          <h2>Start with a Ready-Made Template</h2>
+          <p class="muted">Pick any style — you can customize every color, font, and layout after.</p>
+        </div>
+        <div id="homeTemplatesGrid" class="home-templates-grid"></div>
       </div>
     </section>
 
     <!-- ======================================================
-         VIEW 2: OCR REVIEW & VERIFICATION
+         SECTION 2: EDIT CLASSES (OCR REVIEW & BULK EDITOR)
     ======================================================= -->
     <section id="reviewView" class="view-section hidden">
       <div class="section-header-row">
         <div>
-          <span class="eyebrow">Step 2 of 3 • Verification</span>
-          <h2>Review Extracted Schedule</h2>
-          <p class="section-sub">Verify the recognized details below before generating your final timetable. Items highlighted in amber need your attention.</p>
+          <span class="eyebrow">Step 2 • Edit Classes</span>
+          <h2>Review &amp; Manage Classes</h2>
+          <p class="section-sub">Edit course codes, titles, rooms, times, and days. Amber rows indicate items that need verification.</p>
         </div>
         <div class="section-header-actions">
-          <button type="button" id="reviewBackBtn" class="btn btn-secondary">← Back to Upload</button>
-          <button type="button" id="confirmScheduleBtn" class="btn btn-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            <span>Generate Timetable</span>
-          </button>
+          <button type="button" id="reviewBackBtn" class="btn btn-secondary">← Back</button>
+          <button type="button" id="confirmToCustomizeBtn" class="btn btn-secondary">Customize Design</button>
+          <button type="button" id="confirmScheduleBtn" class="btn btn-primary">Save &amp; Preview Timetable</button>
         </div>
       </div>
 
-      <!-- Review Summary Banner -->
       <div id="reviewSummaryBanner" class="alert-box alert-warning hidden">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <div class="alert-content">
           <strong id="reviewSummaryTitle">Please review highlighted entries</strong>
-          <p id="reviewSummaryText">Some fields had lower OCR confidence or missing details. Edit them below before continuing.</p>
+          <p id="reviewSummaryText">Check missing rooms, uncertain OCR text, or time ranges before continuing.</p>
         </div>
       </div>
 
-      <!-- Editable Metadata Card -->
       <div class="card review-meta-card">
-        <div class="form-grid-3">
+        <div class="form-grid-2">
           <div class="form-field">
-            <label for="revInstitution">Institution / School</label>
-            <input type="text" id="revInstitution" placeholder="e.g. State University" />
+            <label for="revInstitution">Institution / University</label>
+            <input type="text" id="revInstitution" placeholder="e.g. Technological Institute of the Philippines" />
           </div>
           <div class="form-field">
             <label for="revTitle">Schedule Title</label>
-            <input type="text" id="revTitle" placeholder="e.g. BS Computer Science — 2nd Sem" />
+            <input type="text" id="revTitle" placeholder="e.g. Class Schedule" />
           </div>
           <div class="form-field">
-            <label for="revMeta">Student / Section / Term</label>
-            <input type="text" id="revMeta" placeholder="e.g. Section CS12S2 • SY 2026–2027" />
+            <label for="revStudent">Student Name</label>
+            <input type="text" id="revStudent" placeholder="e.g. Alex Rivera" />
+          </div>
+          <div class="form-field">
+            <label for="revSection">Course &amp; Section</label>
+            <input type="text" id="revSection" placeholder="e.g. BSCS • Section CS12S2" />
+          </div>
+          <div class="form-field">
+            <label for="revSemester">Semester / School Year</label>
+            <input type="text" id="revSemester" placeholder="e.g. 2nd Semester • SY 2026–2027" />
           </div>
         </div>
       </div>
 
-      <!-- Editable Classes List -->
       <div class="card review-table-card">
         <div class="card-top-bar">
-          <h3>Extracted Classes (<span id="reviewCount">0</span>)</h3>
-          <button type="button" id="reviewAddRowBtn" class="btn btn-secondary btn-sm">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>Add Row</span>
-          </button>
+          <h3>Classes (<span id="reviewCount">0</span>)</h3>
+          <button type="button" id="reviewAddRowBtn" class="btn btn-primary btn-sm">+ Add Class Row</button>
         </div>
         <div id="reviewRowsContainer" class="review-rows"></div>
       </div>
     </section>
 
     <!-- ======================================================
-         VIEW 3: MAIN TIMETABLE DASHBOARD
+         SECTIONS 3 & 4: WORKSPACE (CUSTOMIZE STUDIO + LIVE PREVIEW)
     ======================================================= -->
-    <section id="dashboardView" class="view-section hidden">
-      <!-- Live Status Row: Current Class & Upcoming Class -->
-      <div class="live-status-grid">
-        <div class="card live-card" id="currentClassCard">
-          <div class="live-card-top">
-            <span class="live-badge" id="currentStatusBadge">
-              <span class="pulse-dot"></span>
-              <span id="currentStatusLabel">Current Status</span>
-            </span>
-            <span class="live-clock" id="liveClock">--:--</span>
-          </div>
-          <div class="live-card-body" id="currentClassBody">
-            <strong>No class right now</strong>
-            <span>Enjoy your free time.</span>
-          </div>
-        </div>
-
-        <div class="card live-card" id="upcomingClassCard">
-          <div class="live-card-top">
-            <span class="live-badge badge-indigo">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>Upcoming Class</span>
-            </span>
-            <span class="live-countdown" id="upcomingCountdown">—</span>
-          </div>
-          <div class="live-card-body" id="upcomingClassBody">
-            <strong>No upcoming classes</strong>
-            <span>Add a class to see your next session.</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Schedule Statistics Row -->
-      <div class="stats-grid">
-        <div class="card stat-card">
-          <span class="stat-label">Subjects</span>
-          <strong class="stat-value" id="statSubjects">0</strong>
-          <span class="stat-sub">Unique courses</span>
-        </div>
-        <div class="card stat-card">
-          <span class="stat-label">Weekly Sessions</span>
-          <strong class="stat-value" id="statSessions">0</strong>
-          <span class="stat-sub">Total class blocks</span>
-        </div>
-        <div class="card stat-card">
-          <span class="stat-label">Class Hours / Week</span>
-          <strong class="stat-value" id="statHours">0h</strong>
-          <span class="stat-sub">Scheduled time</span>
-        </div>
-        <div class="card stat-card">
-          <span class="stat-label">Busiest Day</span>
-          <strong class="stat-value" id="statBusiest">—</strong>
-          <span class="stat-sub" id="statBusiestSub">No classes</span>
-        </div>
-        <div class="card stat-card">
-          <span class="stat-label">Free Days</span>
-          <strong class="stat-value" id="statFreeDays">7</strong>
-          <span class="stat-sub" id="statFreeDaysSub">Mon–Sun</span>
-        </div>
-      </div>
-
-      <!-- Conflict Detection Alert Banner -->
-      <div id="conflictBanner" class="alert-box alert-danger hidden" role="alert">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <div class="alert-content">
-          <strong id="conflictTitle">Schedule conflict detected</strong>
-          <ul id="conflictList" class="conflict-list"></ul>
-        </div>
-      </div>
-
-      <!-- Controls & Filter Toolbar -->
-      <div class="card toolbar-card">
-        <div class="toolbar-row">
-          <div class="search-wrap">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="search" id="searchInput" placeholder="Search course code, title, or room…" aria-label="Search schedule" />
+    <section id="workspaceView" class="view-section hidden">
+      <!-- Live Status & Stats (shown in Preview/Dashboard mode) -->
+      <div id="dashboardWidgets">
+        <div class="live-status-grid">
+          <div class="card live-card">
+            <div class="live-card-top">
+              <span class="live-badge" id="currentStatusBadge">
+                <span class="pulse-dot"></span>
+                <span id="currentStatusLabel">Current Status</span>
+              </span>
+              <span class="live-clock" id="liveClock">--:--</span>
+            </div>
+            <div class="live-card-body" id="currentClassBody">
+              <strong>No class right now</strong>
+              <span>Enjoy your free time.</span>
+            </div>
           </div>
 
-          <div class="view-toggle" role="group" aria-label="Timetable view">
-            <button type="button" id="viewGridBtn" class="toggle-btn active">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-              <span>Weekly Grid</span>
-            </button>
-            <button type="button" id="viewCardsBtn" class="toggle-btn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-              <span>Day Cards</span>
-            </button>
-          </div>
-
-          <div class="toolbar-actions">
-            <select id="themeSelect" class="select-input" aria-label="Timetable theme" title="Timetable export theme">
-              <option value="indigo">Theme: Modern Indigo</option>
-              <option value="minimal">Theme: Minimalist Slate</option>
-              <option value="pastel">Theme: Soft Pastel</option>
-              <option value="gold">Theme: University Gold</option>
-              <option value="dark">Theme: Dark Dev</option>
-            </select>
-
-            <button type="button" id="addClassBtn" class="btn btn-primary btn-sm">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              <span>Add Class</span>
-            </button>
-
-            <button type="button" id="openExportBtn" class="btn btn-secondary btn-sm">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              <span>Export</span>
-            </button>
+          <div class="card live-card">
+            <div class="live-card-top">
+              <span class="live-badge badge-indigo">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>Upcoming Class</span>
+              </span>
+              <span class="live-countdown" id="upcomingCountdown">—</span>
+            </div>
+            <div class="live-card-body" id="upcomingClassBody">
+              <strong>No upcoming classes</strong>
+              <span>Add a class to see your next session.</span>
+            </div>
           </div>
         </div>
 
-        <div class="toolbar-subrow">
-          <div class="day-filter-pills" id="dayFilterPills" role="group" aria-label="Filter by day">
-            <button type="button" class="pill-btn active" data-day="ALL">All Days</button>
-            <button type="button" class="pill-btn" data-day="Mon">Mon</button>
-            <button type="button" class="pill-btn" data-day="Tue">Tue</button>
-            <button type="button" class="pill-btn" data-day="Wed">Wed</button>
-            <button type="button" class="pill-btn" data-day="Thu">Thu</button>
-            <button type="button" class="pill-btn" data-day="Fri">Fri</button>
-            <button type="button" class="pill-btn" data-day="Sat">Sat</button>
-            <button type="button" class="pill-btn" data-day="Sun">Sun</button>
+        <div class="stats-grid">
+          <div class="card stat-card">
+            <span class="stat-label">Subjects</span>
+            <strong class="stat-value" id="statSubjects">0</strong>
+            <span class="stat-sub">Unique courses</span>
           </div>
+          <div class="card stat-card">
+            <span class="stat-label">Sessions</span>
+            <strong class="stat-value" id="statSessions">0</strong>
+            <span class="stat-sub">Weekly blocks</span>
+          </div>
+          <div class="card stat-card">
+            <span class="stat-label">Hours / Week</span>
+            <strong class="stat-value" id="statHours">0h</strong>
+            <span class="stat-sub">Scheduled time</span>
+          </div>
+          <div class="card stat-card">
+            <span class="stat-label">Busiest Day</span>
+            <strong class="stat-value" id="statBusiest">—</strong>
+            <span class="stat-sub" id="statBusiestSub">No classes</span>
+          </div>
+          <div class="card stat-card">
+            <span class="stat-label">Free Days</span>
+            <strong class="stat-value" id="statFreeDays">7</strong>
+            <span class="stat-sub" id="statFreeDaysSub">Mon–Sun</span>
+          </div>
+        </div>
 
-          <div class="toggle-checks">
-            <label class="switch-label">
-              <input type="checkbox" id="toggleFreeTime" checked />
-              <span>Show free periods</span>
-            </label>
-            <label class="switch-label">
-              <input type="checkbox" id="toggleWeekends" checked />
-              <span>Show Sat–Sun</span>
-            </label>
-            <button type="button" id="editReviewBtn" class="btn-link btn-link-sm" title="Edit all classes in table view">Bulk edit table</button>
+        <div id="conflictBanner" class="alert-box alert-danger hidden" role="alert">
+          <div class="alert-content">
+            <strong id="conflictTitle">Schedule conflict detected</strong>
+            <ul id="conflictList" class="conflict-list"></ul>
           </div>
         </div>
       </div>
 
-      <!-- EXPORTABLE TIMETABLE CENTERPIECE -->
-      <div id="captureArea" class="capture-area" data-theme="indigo">
-        <div class="schedule-header">
-          <div class="schedule-header-left">
-            <div class="inst-name" id="headerInstitution" contenteditable="true" spellcheck="false" title="Click to edit institution">Institution Name</div>
-            <h2 class="sched-title" id="headerTitle" contenteditable="true" spellcheck="false" title="Click to edit title">Class Schedule</h2>
+      <!-- Split Workspace: Customize Sidebar + Live Schedule Preview -->
+      <div class="studio-layout" id="studioLayout">
+        <!-- CUSTOMIZE DESIGN PANEL (Desktop Sidebar / Mobile Bottom Sheet) -->
+        <aside id="customizePanel" class="customize-panel card hidden" aria-label="Customize Design">
+          <div class="customize-panel-header">
+            <div>
+              <h3>Customize Design</h3>
+              <p class="panel-sub">Changes update your schedule live</p>
+            </div>
+            <div class="panel-header-btns">
+              <button type="button" id="mobilePreviewToggleBtn" class="btn btn-primary btn-sm mobile-only">Preview</button>
+              <button type="button" id="closeCustomizeBtn" class="icon-btn" title="Close Customize Panel" aria-label="Close Customize Panel">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
           </div>
-          <div class="schedule-header-right">
-            <div class="sched-meta" id="headerMeta" contenteditable="true" spellcheck="false" title="Click to edit student/section/term">Student Name • Section • Term</div>
+
+          <div class="customize-scroll">
+            <!-- 1. Ready-Made Templates (Horizontally Scrollable Cards) -->
+            <details class="cust-section" open>
+              <summary class="cust-summary">
+                <span>Ready-Made Templates</span>
+                <span class="summary-badge">8 presets</span>
+              </summary>
+              <div class="cust-body">
+                <div id="templateCardsStrip" class="template-strip"></div>
+              </div>
+            </details>
+
+            <!-- 2. Colors, Palettes & Background Gradient -->
+            <details class="cust-section" open>
+              <summary class="cust-summary">
+                <span>Colors &amp; Background</span>
+              </summary>
+              <div class="cust-body">
+                <div class="field-label-sm">Color Palettes (Auto-colors subjects)</div>
+                <div id="paletteButtons" class="palette-chips"></div>
+
+                <div class="color-grid-2">
+                  <label class="color-input-card">
+                    <span>Schedule BG</span>
+                    <input type="color" id="custBgColor" />
+                  </label>
+                  <label class="color-input-card">
+                    <span>Surface / Cards</span>
+                    <input type="color" id="custSurfaceColor" />
+                  </label>
+                  <label class="color-input-card">
+                    <span>Text Color</span>
+                    <input type="color" id="custTextColor" />
+                  </label>
+                  <label class="color-input-card">
+                    <span>Grid &amp; Borders</span>
+                    <input type="color" id="custBorderColor" />
+                  </label>
+                  <label class="color-input-card">
+                    <span>Accent Color</span>
+                    <input type="color" id="custAccentColor" />
+                  </label>
+                </div>
+
+                <!-- Gradient Background -->
+                <div class="divider-line"></div>
+                <label class="switch-row">
+                  <span>Use Custom Gradient Background</span>
+                  <input type="checkbox" id="custUseGradient" />
+                </label>
+                <div id="gradientControls" class="gradient-controls hidden">
+                  <div class="color-grid-2">
+                    <label class="color-input-card">
+                      <span>Gradient Start</span>
+                      <input type="color" id="custGradStart" />
+                    </label>
+                    <label class="color-input-card">
+                      <span>Gradient End</span>
+                      <input type="color" id="custGradEnd" />
+                    </label>
+                  </div>
+                  <label class="slider-field">
+                    <span>Gradient Angle (<strong id="valGradAngle">135°</strong>)</span>
+                    <input type="range" id="custGradAngle" min="0" max="360" step="15" />
+                  </label>
+                </div>
+
+                <!-- Individual Subject Colors -->
+                <div class="divider-line"></div>
+                <div class="row-between">
+                  <span class="field-label-sm" style="margin:0;">Subject Colors</span>
+                  <button type="button" id="autoAssignColorsBtn" class="btn-link btn-link-sm">Assign Unique Colors</button>
+                </div>
+                <div id="subjectColorsList" class="subject-colors-list"></div>
+              </div>
+            </details>
+
+            <!-- 3. Fonts & Typography -->
+            <details class="cust-section">
+              <summary class="cust-summary">
+                <span>Fonts &amp; Typography</span>
+              </summary>
+              <div class="cust-body">
+                <div class="form-field">
+                  <label for="custFontFamily">Font Style</label>
+                  <select id="custFontFamily" class="select-input full-w">
+                    <option value="'Inter', sans-serif">Inter (Modern Clean)</option>
+                    <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans (SaaS)</option>
+                    <option value="'Poppins', sans-serif">Poppins (Geometric)</option>
+                    <option value="'Nunito', sans-serif">Nunito (Soft Rounded)</option>
+                    <option value="'Space Grotesk', sans-serif">Space Grotesk (Tech)</option>
+                    <option value="'Playfair Display', serif">Playfair Display (Editorial)</option>
+                    <option value="'JetBrains Mono', monospace">JetBrains Mono (Dev)</option>
+                  </select>
+                </div>
+
+                <div class="form-grid-2">
+                  <div class="form-field">
+                    <label for="custFontWeight">Font Weight</label>
+                    <select id="custFontWeight" class="select-input full-w">
+                      <option value="400">Regular (400)</option>
+                      <option value="500">Medium (500)</option>
+                      <option value="600">SemiBold (600)</option>
+                      <option value="700">Bold (700)</option>
+                    </select>
+                  </div>
+                  <div class="form-field">
+                    <label>Text Alignment</label>
+                    <div class="seg-control" id="custAlignGroup">
+                      <button type="button" class="seg-btn active" data-align="left">Left</button>
+                      <button type="button" class="seg-btn" data-align="center">Center</button>
+                      <button type="button" class="seg-btn" data-align="right">Right</button>
+                    </div>
+                  </div>
+                </div>
+
+                <label class="slider-field">
+                  <span>Course Code Size (<strong id="valCodeSize">13px</strong>)</span>
+                  <input type="range" id="custCodeSize" min="10" max="18" step="1" />
+                </label>
+                <label class="slider-field">
+                  <span>Subject Name Size (<strong id="valTitleSize">11px</strong>)</span>
+                  <input type="range" id="custTitleSize" min="9" max="16" step="1" />
+                </label>
+                <label class="slider-field">
+                  <span>Room &amp; Details Size (<strong id="valRoomSize">11px</strong>)</span>
+                  <input type="range" id="custRoomSize" min="9" max="15" step="1" />
+                </label>
+                <label class="slider-field">
+                  <span>Time Labels Size (<strong id="valTimeSize">11px</strong>)</span>
+                  <input type="range" id="custTimeSize" min="9" max="15" step="1" />
+                </label>
+              </div>
+            </details>
+
+            <!-- 4. Schedule Layout & Spacing -->
+            <details class="cust-section">
+              <summary class="cust-summary">
+                <span>Layout &amp; Spacing</span>
+              </summary>
+              <div class="cust-body">
+                <div class="field-label-sm">Layout Mode</div>
+                <div class="layout-grid-2" id="custLayoutGroup">
+                  <button type="button" class="layout-opt-btn active" data-layout="grid">Weekly Grid</button>
+                  <button type="button" class="layout-opt-btn" data-layout="cards">Day Cards</button>
+                  <button type="button" class="layout-opt-btn" data-layout="compact">Compact</button>
+                  <button type="button" class="layout-opt-btn" data-layout="minimal">Minimalist</button>
+                  <button type="button" class="layout-opt-btn" data-layout="day">Single Day</button>
+                </div>
+
+                <div class="form-field" style="margin-top:0.75rem;">
+                  <label>Time Format</label>
+                  <div class="seg-control" id="custTimeFmtGroup">
+                    <button type="button" class="seg-btn active" data-fmt="12">12-Hour (AM/PM)</button>
+                    <button type="button" class="seg-btn" data-fmt="24">24-Hour (14:00)</button>
+                  </div>
+                </div>
+
+                <label class="slider-field">
+                  <span>Block Height / Hour (<strong id="valHourHeight">64px</strong>)</span>
+                  <input type="range" id="custHourHeight" min="44" max="96" step="4" />
+                </label>
+                <label class="slider-field">
+                  <span>Class Spacing (<strong id="valBlockGap">4px</strong>)</span>
+                  <input type="range" id="custBlockGap" min="1" max="12" step="1" />
+                </label>
+                <label class="slider-field">
+                  <span>Corner Radius (<strong id="valBorderRadius">10px</strong>)</span>
+                  <input type="range" id="custBorderRadius" min="0" max="20" step="2" />
+                </label>
+                <label class="slider-field">
+                  <span>Border Thickness (<strong id="valBorderWidth">1px</strong>)</span>
+                  <input type="range" id="custBorderWidth" min="0" max="4" step="1" />
+                </label>
+
+                <label class="switch-row">
+                  <span>Show Weekends (Sat–Sun)</span>
+                  <input type="checkbox" id="custShowWeekends" checked />
+                </label>
+                <label class="switch-row">
+                  <span>Show Free Time Gaps</span>
+                  <input type="checkbox" id="custShowFreeTime" checked />
+                </label>
+              </div>
+            </details>
+
+            <!-- 5. Schedule Header & Logo -->
+            <details class="cust-section">
+              <summary class="cust-summary">
+                <span>Schedule Header &amp; Logo</span>
+              </summary>
+              <div class="cust-body">
+                <div class="form-field">
+                  <label for="custInstName">Institution / University</label>
+                  <input type="text" id="custInstName" placeholder="University Name" />
+                </div>
+                <div class="form-field">
+                  <label for="custSchedTitle">Schedule Title</label>
+                  <input type="text" id="custSchedTitle" placeholder="Class Schedule" />
+                </div>
+                <div class="form-field">
+                  <label for="custStudentName">Student Name</label>
+                  <input type="text" id="custStudentName" placeholder="Full Name" />
+                </div>
+                <div class="form-grid-2">
+                  <div class="form-field">
+                    <label for="custCourseSection">Course &amp; Section</label>
+                    <input type="text" id="custCourseSection" placeholder="BSCS • CS12S2" />
+                  </div>
+                  <div class="form-field">
+                    <label for="custSemester">Semester / SY</label>
+                    <input type="text" id="custSemester" placeholder="2nd Sem • 2026–2027" />
+                  </div>
+                </div>
+
+                <div class="color-grid-2">
+                  <label class="color-input-card">
+                    <span>Header BG</span>
+                    <input type="color" id="custHeaderBg" />
+                  </label>
+                  <label class="color-input-card">
+                    <span>Header Text</span>
+                    <input type="color" id="custHeaderText" />
+                  </label>
+                </div>
+
+                <div class="logo-upload-row">
+                  <label class="btn btn-secondary btn-sm">
+                    <span>Upload School Logo</span>
+                    <input type="file" id="logoUploadInput" accept="image/*" hidden />
+                  </label>
+                  <button type="button" id="removeLogoBtn" class="btn btn-ghost btn-sm text-danger hidden">Remove Logo</button>
+                </div>
+              </div>
+            </details>
+
+            <!-- 6. Saved Designs & Reset -->
+            <details class="cust-section">
+              <summary class="cust-summary">
+                <span>Saved Designs</span>
+              </summary>
+              <div class="cust-body">
+                <div class="save-design-row">
+                  <input type="text" id="saveDesignNameInput" placeholder="e.g. Pastel Finals Week" />
+                  <button type="button" id="saveDesignBtn" class="btn btn-primary btn-sm">Save</button>
+                </div>
+                <div id="savedDesignsList" class="saved-designs-list"></div>
+                <div class="divider-line"></div>
+                <button type="button" id="resetDesignBtn" class="btn btn-danger-soft btn-sm btn-block">Reset Design to Default</button>
+              </div>
+            </details>
           </div>
+        </aside>
+
+        <!-- RIGHT / MAIN AREA: LIVE TIMETABLE PREVIEW -->
+        <div class="preview-column" id="previewColumn">
+          <!-- Compact Action Toolbar -->
+          <div class="card toolbar-card">
+            <div class="toolbar-row">
+              <div class="search-wrap">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="search" id="searchInput" placeholder="Search course, room, or day…" aria-label="Search schedule" />
+              </div>
+
+              <div class="view-toggle" role="group" aria-label="Quick view switcher">
+                <button type="button" class="toggle-btn active" data-quick-layout="grid">Week</button>
+                <button type="button" class="toggle-btn" data-quick-layout="day">Day</button>
+                <button type="button" class="toggle-btn" data-quick-layout="cards">Cards</button>
+                <button type="button" class="toggle-btn" data-quick-layout="compact">Compact</button>
+                <button type="button" class="toggle-btn" data-quick-layout="minimal">Minimal</button>
+              </div>
+
+              <div class="toolbar-actions">
+                <button type="button" id="toggleCustomizeBtn" class="btn btn-secondary btn-sm">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                  <span>Customize</span>
+                </button>
+                <button type="button" id="openDesignBoardBtn" class="btn btn-secondary btn-sm" title="Create a phone wallpaper from your timetable">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                  <span>Design Board</span>
+                </button>
+                <button type="button" id="addClassBtn" class="btn btn-primary btn-sm">+ Add Class</button>
+              </div>
+            </div>
+
+            <!-- Mobile / Single Day Switcher & Day Filter Pills -->
+            <div class="toolbar-subrow">
+              <div class="day-filter-pills" id="dayFilterPills" role="group" aria-label="Filter by day">
+                <button type="button" class="pill-btn active" data-day="ALL">All</button>
+                <button type="button" class="pill-btn" data-day="Mon">Mon</button>
+                <button type="button" class="pill-btn" data-day="Tue">Tue</button>
+                <button type="button" class="pill-btn" data-day="Wed">Wed</button>
+                <button type="button" class="pill-btn" data-day="Thu">Thu</button>
+                <button type="button" class="pill-btn" data-day="Fri">Fri</button>
+                <button type="button" class="pill-btn" data-day="Sat">Sat</button>
+                <button type="button" class="pill-btn" data-day="Sun">Sun</button>
+              </div>
+              <div class="toolbar-sub-actions">
+                <button type="button" id="quickToggleWeekendsBtn" class="btn-link btn-link-sm">Hide Weekends</button>
+                <span class="dot-sep">•</span>
+                <button type="button" id="printPreviewBtn" class="btn-link btn-link-sm">Print Preview</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- EXPORTABLE LIVE TIMETABLE CANVAS -->
+          <div id="captureArea" class="capture-area">
+            <div id="scheduleHeader" class="schedule-header">
+              <div class="schedule-header-brand">
+                <img id="headerLogoImg" class="header-logo hidden" alt="School Logo" />
+                <div>
+                  <div class="inst-name" id="headerInstitution" contenteditable="true" spellcheck="false">Institution Name</div>
+                  <h2 class="sched-title" id="headerTitle" contenteditable="true" spellcheck="false">Class Schedule</h2>
+                </div>
+              </div>
+              <div class="schedule-header-meta">
+                <div class="meta-student" id="headerStudent"></div>
+                <div class="meta-sub" id="headerSubMeta"></div>
+              </div>
+            </div>
+
+            <!-- Single-Day Mobile Selector (visible when layout === 'day') -->
+            <div id="singleDayBar" class="single-day-bar hidden">
+              <button type="button" id="prevDayBtn" class="icon-btn" aria-label="Previous day">‹</button>
+              <div id="singleDayTabs" class="single-day-tabs"></div>
+              <button type="button" id="nextDayBtn" class="icon-btn" aria-label="Next day">›</button>
+            </div>
+
+            <div id="gridView" class="grid-scroll-wrap"></div>
+            <div id="cardsView" class="cards-view hidden"></div>
+            <div id="singleDayView" class="single-day-view hidden"></div>
+          </div>
+
+          <p class="footer-hint">Tap any class to edit or change its color. On desktop Weekly Grid, drag a class to another day to rearrange it.</p>
         </div>
-
-        <div id="gridView" class="grid-scroll-wrap"></div>
-        <div id="cardsView" class="cards-view hidden"></div>
       </div>
+    </section>
 
-      <p class="footer-hint">Click any class block to edit, change its color, or delete it. Click the schedule header text above to rename it.</p>
+    <!-- ======================================================
+         SECTION 5: DESIGN BOARD (PHONE WALLPAPER STUDIO)
+    ======================================================= -->
+    <section id="designBoardView" class="view-section hidden">
+      <div id="designBoardRoot" class="db-root"></div>
     </section>
   </main>
+
+  <!-- MOBILE BOTTOM NAVIGATION BAR (ONE-HANDED ACCESS) -->
+  <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+    <button type="button" class="mob-nav-btn active" data-mob-nav="upload" id="mobHomeBtn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Home</span>
+    </button>
+    <button type="button" class="mob-nav-btn" data-mob-nav="dashboard" id="mobScheduleBtn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Schedule</span>
+    </button>
+    <button type="button" class="mob-nav-btn" data-mob-nav="customize" id="mobCustomizeBtn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+      <span>Customize</span>
+    </button>
+    <button type="button" class="mob-nav-btn" data-mob-nav="board" id="mobBoardBtn" aria-label="Design Board">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      <span>Board</span>
+    </button>
+    <button type="button" class="mob-nav-btn" data-mob-nav="export" id="mobExportBtn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span>Export</span>
+    </button>
+  </nav>
 
   <!-- ======================================================
        MODAL: ADD / EDIT CLASS
@@ -428,9 +730,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <h3 id="modalTitle">Edit Class</h3>
-        <button type="button" id="closeModalX" class="icon-btn" aria-label="Close modal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
+        <button type="button" id="closeModalX" class="icon-btn" aria-label="Close modal">✕</button>
       </div>
 
       <form id="classForm" novalidate>
@@ -443,7 +743,7 @@
           </div>
           <div class="form-field">
             <label for="cRoom">Classroom / Lab</label>
-            <input type="text" id="cRoom" placeholder="e.g. Room 304 / Lab B" />
+            <input type="text" id="cRoom" placeholder="e.g. Room 304" />
           </div>
         </div>
 
@@ -478,7 +778,10 @@
 
         <div class="form-field">
           <label>Subject Color</label>
-          <div class="color-picker-row" id="colorSwatches"></div>
+          <div class="color-picker-wrap">
+            <div class="color-picker-row" id="colorSwatches"></div>
+            <input type="color" id="cColorCustom" class="custom-color-dot" title="Pick any custom color" />
+          </div>
           <input type="hidden" id="cColor" value="#4f46e5" />
         </div>
 
@@ -497,15 +800,13 @@
   </div>
 
   <!-- ======================================================
-       MODAL: EXPORT & PRINT
+       MODAL: EXPORT & PRINT PREVIEW
   ======================================================= -->
   <div id="exportModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
     <div class="modal-card modal-sm">
       <div class="modal-header">
-        <h3 id="exportModalTitle">Export Timetable</h3>
-        <button type="button" id="closeExportX" class="icon-btn" aria-label="Close export modal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
+        <h3 id="exportModalTitle">Export Schedule</h3>
+        <button type="button" id="closeExportX" class="icon-btn" aria-label="Close export modal">✕</button>
       </div>
 
       <div class="form-field">
@@ -513,34 +814,36 @@
         <div class="radio-cards">
           <label class="radio-card">
             <input type="radio" name="exportLayout" value="grid" checked />
-            <span>
-              <strong>Weekly Grid</strong>
-              <small>Full visual timetable</small>
-            </span>
+            <span><strong>Weekly Grid</strong><small>Full visual timetable</small></span>
           </label>
           <label class="radio-card">
             <input type="radio" name="exportLayout" value="cards" />
-            <span>
-              <strong>Day Cards</strong>
-              <small>Chronological list per day</small>
-            </span>
+            <span><strong>Day Cards</strong><small>Chronological list</small></span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="exportLayout" value="compact" />
+            <span><strong>Compact</strong><small>Dense weekly view</small></span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="exportLayout" value="minimal" />
+            <span><strong>Minimalist</strong><small>Clean borderless list</small></span>
           </label>
         </div>
       </div>
 
+      <div class="form-field">
+        <label for="exportQuality">Image Resolution</label>
+        <select id="exportQuality" class="select-input full-w">
+          <option value="2" selected>High Resolution (2× — Recommended)</option>
+          <option value="3">Ultra HD (3× — Print / Wallpaper)</option>
+          <option value="1.5">Standard (1.5× — Fast Mobile)</option>
+        </select>
+      </div>
+
       <div class="export-actions-stack">
-        <button type="button" id="exportPngBtn" class="btn btn-primary btn-block">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          <span>Download High-Res PNG</span>
-        </button>
-        <button type="button" id="exportPdfBtn" class="btn btn-secondary btn-block">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          <span>Download PDF Document</span>
-        </button>
-        <button type="button" id="exportPrintBtn" class="btn btn-ghost btn-block">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          <span>Print Timetable</span>
-        </button>
+        <button type="button" id="exportPngBtn" class="btn btn-primary btn-touch btn-block">Download PNG Image</button>
+        <button type="button" id="exportPdfBtn" class="btn btn-secondary btn-touch btn-block">Download PDF Document</button>
+        <button type="button" id="exportPrintBtn" class="btn btn-ghost btn-touch btn-block">Print / Save Print Preview</button>
       </div>
     </div>
   </div>
@@ -556,7 +859,7 @@
         <div></div>
         <div class="modal-footer-right">
           <button type="button" id="confirmCancelBtn" class="btn btn-secondary">Cancel</button>
-          <button type="button" id="confirmOkBtn" class="btn btn-danger">Delete</button>
+          <button type="button" id="confirmOkBtn" class="btn btn-danger">Confirm</button>
         </div>
       </div>
     </div>
@@ -566,5 +869,6 @@
   <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
   <script src="script.js"></script>
+  <script src="design-board.js"></script>
 </body>
 </html>

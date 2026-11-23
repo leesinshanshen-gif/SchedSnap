@@ -366,290 +366,78 @@ retryScanBtn.addEventListener("click", () => {
 });
 
 /* ==========================================================================
-   100% CLIENT-SIDE OCR (TESSERACT.JS — NO API KEY REQUIRED)
+   OCR SCAN VIA EXISTING VERCEL /api/scan ENDPOINT
    ========================================================================== */
-function getPreprocessedOcrCanvas() {
-  const { dataUrl } = getRotatedBase64();
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-
-      // Grayscale + mild contrast boost for sharper printed-table OCR
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const d = imgData.data;
-      const contrast = 1.25;
-      const intercept = 128 * (1 - contrast);
-      for (let i = 0; i < d.length; i += 4) {
-        const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-        const boosted = Math.max(0, Math.min(255, gray * contrast + intercept));
-        d[i] = d[i + 1] = d[i + 2] = boosted;
-      }
-      ctx.putImageData(imgData, 0, 0);
-      resolve(canvas);
-    };
-    img.src = dataUrl;
-  });
-}
-
-function parseDaysToken(token) {
-  if (!token) return [];
-  const t = token.trim();
-  const found = new Set();
-
-  // Full / 2-3 letter patterns
-  const patterns = [
-    [/\b(?:mon|mo)\b/gi, "Mon"],
-    [/\b(?:tue|tues|tu)\b/gi, "Tue"],
-    [/\b(?:wed|we)\b/gi, "Wed"],
-    [/\b(?:thu|thur|thurs|th)\b/gi, "Thu"],
-    [/\b(?:fri|fr)\b/gi, "Fri"],
-    [/\b(?:sat|sa)\b/gi, "Sat"],
-    [/\b(?:sun|su)\b/gi, "Sun"]
-  ];
-  patterns.forEach(([re, day]) => {
-    if (re.test(t)) found.add(day);
-  });
-
-  // Combined notations like MoWeFr, TuTh, MoWe, MWF, TTh, MW
-  if (found.size === 0) {
-    const compact = t.replace(/[^a-zA-Z]/g, "");
-    if (/^(?:Mo|Tu|We|Th|Fr|Sa|Su)+$/i.test(compact)) {
-      const pairs = compact.match(/Mo|Tu|We|Th|Fr|Sa|Su/gi) || [];
-      const map = { mo: "Mon", tu: "Tue", we: "Wed", th: "Thu", fr: "Fri", sa: "Sat", su: "Sun" };
-      pairs.forEach((p) => found.add(map[p.toLowerCase()]));
-    } else if (/^[MTWRFSU]+$/i.test(compact) && compact.length <= 6) {
-      let s = compact.toUpperCase();
-      if (s.includes("TH")) { found.add("Thu"); s = s.replace(/TH/g, ""); }
-      if (s.includes("SU")) { found.add("Sun"); s = s.replace(/SU/g, ""); }
-      if (s.includes("SA")) { found.add("Sat"); s = s.replace(/SA/g, ""); }
-      for (const ch of s) {
-        if (ch === "M") found.add("Mon");
-        else if (ch === "T") found.add("Tue");
-        else if (ch === "W") found.add("Wed");
-        else if (ch === "R") found.add("Thu");
-        else if (ch === "F") found.add("Fri");
-        else if (ch === "S") found.add("Sat");
-      }
-    }
-  }
-
-  return DAYS_ALL.filter((d) => found.has(d));
-}
-
-function to24Hour(hourStr, minStr, ampm) {
-  let h = parseInt(hourStr, 10);
-  const m = parseInt(minStr || "0", 10);
-  if (isNaN(h) || isNaN(m) || h > 23 || m > 59) return null;
-
-  if (ampm) {
-    const ap = ampm.toUpperCase();
-    if (ap === "PM" && h < 12) h += 12;
-    if (ap === "AM" && h === 12) h = 0;
-  }
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-function parseOcrScheduleText(rawText) {
-  const lines = rawText
-    .split(/\r?\n/)
-    .map((l) => l.replace(/\s+/g, " ").trim())
-    .filter((l) => l.length > 2);
-
-  let institution = "My University";
-  let title = "Class Schedule";
-  let metaParts = [];
-
-  // Try to detect header metadata
-  for (const line of lines.slice(0, 12)) {
-    if (/university|institute|college|academy|school/i.test(line) && institution === "My University") {
-      institution = line.replace(/[^a-zA-Z0-9 .,'&-]/g, "").trim();
-    }
-    const secMatch = line.match(/\b(?:section|sec\.?)[:\s-]*([A-Z0-9-]{2,12})/i);
-    if (secMatch) metaParts.push(`Section ${secMatch[1]}`);
-    const termMatch = line.match(/\b((?:1st|2nd|3rd|first|second|summer)\s+sem(?:ester)?|sy\s*\d{4}\s*[-–]\s*\d{4})/i);
-    if (termMatch) metaParts.push(termMatch[1]);
-  }
-
-  const timeRangeRegex = /(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*[-–—to]+\s*(\d{1,2})[:.](\d{2})\s*(AM|PM)?/i;
-  const courseCodeRegex = /\b([A-Z]{2,5}[\s-]?\d{2,4}[A-Z]{0,3})\b/;
-  const dayTokenRegex = /\b(MoWeFr|MoWe|TuTh|MWF|TTh|MTWThF|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Mo|Tu|We|Th|Fr|Sa|Su)(?:\s*[,/&]\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun|Mo|Tu|We|Th|Fr|Sa|Su))*\b/i;
-
-  const extracted = [];
-  let lastCode = "";
-  let lastTitle = "";
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const timeMatch = line.match(timeRangeRegex);
-    if (!timeMatch) continue;
-
-    // Infer AM/PM if only the second time has it
-    const startAp = timeMatch[3] || (timeMatch[6] && parseInt(timeMatch[1], 10) <= parseInt(timeMatch[4], 10) ? timeMatch[6] : null);
-    const endAp = timeMatch[6] || timeMatch[3] || null;
-
-    let start = to24Hour(timeMatch[1], timeMatch[2], startAp);
-    let end = to24Hour(timeMatch[4], timeMatch[5], endAp);
-
-    const notes = [];
-    let uncertain = false;
-
-    if (!start || !end) {
-      start = "08:00";
-      end = "09:00";
-      uncertain = true;
-      notes.push("Verify class time");
-    } else if (toMinutes(end) <= toMinutes(start)) {
-      // Handle cases like 11:30 - 1:00 where PM was dropped
-      const [eh, em] = end.split(":").map(Number);
-      if (eh < 12) end = `${String(eh + 12).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
-      if (toMinutes(end) <= toMinutes(start)) {
-        uncertain = true;
-        notes.push("End time needs correction");
-      }
-    }
-
-    // Split text before and after time range
-    const beforeTime = line.slice(0, timeMatch.index).trim();
-    const afterTime = line.slice(timeMatch.index + timeMatch[0].length).trim();
-
-    // Days
-    const dayMatch = beforeTime.match(dayTokenRegex) || afterTime.match(dayTokenRegex);
-    let days = dayMatch ? parseDaysToken(dayMatch[0]) : [];
-    if (days.length === 0) {
-      days = ["Mon"];
-      uncertain = true;
-      notes.push("Verify meeting days");
-    }
-
-    // Course code
-    const codeMatch = beforeTime.match(courseCodeRegex);
-    let code = codeMatch ? codeMatch[1].trim() : "";
-    let courseTitle = "";
-
-    if (code) {
-      lastCode = code;
-      let rest = beforeTime.replace(codeMatch[0], "").trim();
-      if (dayMatch) rest = rest.replace(dayMatch[0], "").trim();
-      rest = rest.replace(/\b\d+\.\d{2}\b/g, "").replace(/\b[A-Z]{2}\d{2}[A-Z]\d\b/g, "").trim();
-      courseTitle = rest.replace(/^[-–|:.\s]+|[-–|:.\s]+$/g, "");
-      if (courseTitle) lastTitle = courseTitle;
-    } else if (lastCode) {
-      // Continuation row (e.g., lab schedule on next line)
-      code = lastCode;
-      courseTitle = lastTitle ? `${lastTitle} (Session 2)` : "";
-      uncertain = true;
-      notes.push("Inherited course from previous line — verify");
-    } else {
-      code = `SUBJ ${extracted.length + 1}`;
-      uncertain = true;
-      notes.push("Course code not detected");
-    }
-
-    // Room (usually right after time)
-    let room = afterTime
-      .replace(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b.*$/i, "")
-      .replace(dayTokenRegex, "")
-      .replace(/^[-–|:.\s]+|[-–|:.\s]+$/g, "")
-      .trim();
-
-    if (room.length > 24) room = room.slice(0, 24).trim();
-    if (!room) {
-      uncertain = true;
-      notes.push("Missing room");
-    }
-
-    extracted.push({
-      code,
-      title: courseTitle,
-      days,
-      start,
-      end,
-      room,
-      uncertain,
-      note: notes.join(" • ")
-    });
-  }
-
-  return {
-    institution,
-    title,
-    meta: metaParts.length ? [...new Set(metaParts)].join(" • ") : "Scanned Schedule",
-    classes: extracted
-  };
-}
-
 scanBtn.addEventListener("click", async () => {
   if (!uploadedImageEl) return;
-
-  if (typeof window.Tesseract === "undefined") {
-    scanErrorMessage.textContent = "OCR engine failed to load. Please check your internet connection and refresh.";
-    scanErrorPanel.classList.remove("hidden");
-    return;
-  }
 
   previewPanel.classList.add("hidden");
   scanErrorPanel.classList.add("hidden");
   loadingPanel.classList.remove("hidden");
-  loadingTitle.textContent = "Preparing OCR engine…";
-  loadingSubtitle.textContent = "Running 100% in your browser — no API key needed.";
+  loadingTitle.textContent = "Analyzing your schedule…";
+  loadingSubtitle.textContent = "Reading course codes, meeting days, times, and classrooms.";
+
+  const prompt = `Extract the student class schedule from this enrollment form or timetable image and return ONLY valid JSON matching this exact schema:
+{
+  "institution": "School or University name",
+  "title": "Program or Schedule Title",
+  "meta": "Student Name • Section • Term/SY",
+  "classes": [
+    {
+      "code": "Course code e.g. CS 101",
+      "title": "Full course title (include Lab if laboratory session)",
+      "days": ["Mon", "Wed"],
+      "start": "08:30",
+      "end": "09:30",
+      "room": "Room or building number",
+      "uncertain": false,
+      "note": ""
+    }
+  ]
+}
+Strict rules:
+1. Convert all times (12-hour AM/PM, military, etc.) to 24-hour HH:MM format (e.g. "08:30", "13:30", "16:30").
+2. Use 3-letter day codes ONLY: "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun". Expand combined notations like "MWF", "TTh", "MoWeFr", "TuTh" accurately.
+3. If a course has separate lecture and laboratory schedules or different times/rooms on different days, create separate entries in "classes".
+4. If any field (time, day, room, or course code) is blurry, cut off, or ambiguous, set "uncertain": true and briefly explain why in "note" (e.g. "Blurry room number" or "Verify end time"). Never fabricate unreadable data.`;
 
   try {
-    const canvas = await getPreprocessedOcrCanvas();
-
-    const result = await window.Tesseract.recognize(canvas, "eng", {
-      logger: (m) => {
-        if (m.status === "recognizing text") {
-          const pct = Math.round((m.progress || 0) * 100);
-          loadingTitle.textContent = `Reading schedule text… ${pct}%`;
-          loadingSubtitle.textContent = "Extracting course codes, days, times, and rooms.";
-        } else if (m.status) {
-          loadingTitle.textContent = "Loading OCR engine…";
-          loadingSubtitle.textContent = m.status.charAt(0).toUpperCase() + m.status.slice(1) + "…";
-        }
-      }
+    const { base64 } = getRotatedBase64();
+    const res = await fetch("/api/scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: "image/jpeg", data: base64 } }
+          ]
+        }],
+        generationConfig: { response_mime_type: "application/json" }
+      })
     });
 
-    const rawText = result?.data?.text || "";
-    const parsed = parseOcrScheduleText(rawText);
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json?.error?.message || `Server returned error ${res.status}.`);
+    }
 
-    loadingPanel.classList.add("hidden");
-    previewPanel.classList.remove("hidden");
+    const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const cleanText = rawText.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(cleanText);
 
-    if (!parsed.classes.length) {
-      // Open review screen with 1 starter row so user is never stuck
-      draftSchedule = normalizeSchedule({
-        institution: parsed.institution,
-        title: parsed.title,
-        meta: parsed.meta,
-        classes: [
-          {
-            code: "",
-            title: "",
-            days: ["Mon"],
-            start: "08:00",
-            end: "09:30",
-            room: "",
-            uncertain: true,
-            note: "No time ranges auto-detected — enter your classes below or try a sharper upright photo."
-          }
-        ]
-      });
-      openReviewStep(draftSchedule);
-      showToast("Couldn't auto-detect time rows. You can enter them manually or try a clearer photo.", "warning");
-      return;
+    if (!parsed || !Array.isArray(parsed.classes) || parsed.classes.length === 0) {
+      throw new Error("No class entries were detected. Try a clearer or upright photo of your schedule.");
     }
 
     draftSchedule = normalizeSchedule(parsed);
+    loadingPanel.classList.add("hidden");
+    previewPanel.classList.remove("hidden");
     openReviewStep(draftSchedule);
-    showToast(`Detected ${draftSchedule.classes.length} class entries. Please review highlighted items.`, "success");
+    showToast(`Extracted ${draftSchedule.classes.length} class entries. Please review.`, "success");
   } catch (err) {
     loadingPanel.classList.add("hidden");
-    scanErrorMessage.textContent = err.message || "Unable to scan the image. Please try a clearer, upright photo.";
+    scanErrorMessage.textContent = err.message || "Unable to read the image. Please try again with a clearer photo.";
     scanErrorPanel.classList.remove("hidden");
   }
 });

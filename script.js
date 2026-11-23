@@ -1,6 +1,7 @@
 /* ==========================================================================
-   SchedSnap v3 — Personalized Visual Schedule Builder & Mobile Studio
-   100% Client-Side OCR (Tesseract.js) + Full Live Customization Studio
+   SchedSnap v5 — Upgraded Navigation, Scan/Review, Readability, & Motion
+   Preserves 100% Client-Side OCR (Tesseract.js), Conflict Detection,
+   localStorage Persistence, Export (PNG/PDF/Print), & Design Board Bridge
    ========================================================================== */
 
 const DAYS_ALL = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -9,266 +10,117 @@ const DAY_NAMES_FULL = {
   Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday"
 };
 const JS_DAY_TO_KEY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const PIXELS_PER_HOUR = 64;
 
-// Preset Color Palettes
-const COLOR_PALETTES = {
-  pastel: {
-    label: "Pastel",
-    colors: ["#f472b6", "#a78bfa", "#60a5fa", "#34d399", "#fbbf24", "#fb923c", "#f87171", "#2dd4bf"]
-  },
-  minimalist: {
-    label: "Minimalist",
-    colors: ["#1e293b", "#334155", "#475569", "#0f766e", "#3730a3", "#4b5563", "#52525b", "#0369a1"]
-  },
-  dark: {
-    label: "Dark",
-    colors: ["#6366f1", "#8b5cf6", "#0ea5e9", "#10b981", "#f59e0b", "#ec4899", "#14b8a6", "#f43f5e"]
-  },
-  vibrant: {
-    label: "Vibrant",
-    colors: ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"]
-  },
-  aesthetic: {
-    label: "Aesthetic",
-    colors: ["#818cf8", "#c084fc", "#f472b6", "#fb7185", "#38bdf8", "#4ade80", "#facc15", "#a3e635"]
-  }
-};
-
-// Default Design Configuration
-const DEFAULT_DESIGN = {
-  templateId: "modern-academic",
-  bgColor: "#ffffff",
-  surfaceColor: "#f8fafc",
-  textColor: "#0f172a",
-  borderColor: "#e2e8f0",
-  accentColor: "#4f46e5",
-  useGradient: false,
-  gradStart: "#eef2ff",
-  gradEnd: "#fdf2f8",
-  gradAngle: 135,
-  headerBg: "#ffffff",
-  headerText: "#0f172a",
-  fontFamily: "'Inter', sans-serif",
-  fontWeight: "600",
-  textAlign: "left",
-  codeSize: 13,
-  titleSize: 11,
-  roomSize: 11,
-  timeSize: 11,
-  layout: "grid",
-  timeFormat: "12",
-  hourHeight: 64,
-  blockGap: 4,
-  borderRadius: 10,
-  borderWidth: 1,
-  showWeekends: true,
-  showFreeTime: true,
-  logoDataUrl: ""
-};
-
-// 8 Ready-Made Design Templates
-const DESIGN_TEMPLATES = [
-  {
-    id: "soft-pastel",
-    name: "Soft Pastel Aesthetic",
-    desc: "Warm blush & lavender",
-    palette: COLOR_PALETTES.pastel.colors,
-    settings: {
-      bgColor: "#fffaf7", surfaceColor: "#fff1f2", textColor: "#3f2e3e",
-      borderColor: "#f3d5dc", accentColor: "#db2777",
-      useGradient: true, gradStart: "#fff1f2", gradEnd: "#f5f3ff", gradAngle: 135,
-      headerBg: "#ffffff", headerText: "#3f2e3e",
-      fontFamily: "'Nunito', sans-serif", borderRadius: 14, borderWidth: 1
-    }
-  },
-  {
-    id: "clean-minimalist",
-    name: "Clean Minimalist",
-    desc: "Crisp monochrome lines",
-    palette: COLOR_PALETTES.minimalist.colors,
-    settings: {
-      bgColor: "#ffffff", surfaceColor: "#fafafa", textColor: "#18181b",
-      borderColor: "#e4e4e7", accentColor: "#18181b",
-      useGradient: false, headerBg: "#ffffff", headerText: "#18181b",
-      fontFamily: "'Inter', sans-serif", borderRadius: 6, borderWidth: 1
-    }
-  },
-  {
-    id: "dark-mode",
-    name: "Dark Mode",
-    desc: "Sleek midnight studio",
-    palette: COLOR_PALETTES.dark.colors,
-    settings: {
-      bgColor: "#0f172a", surfaceColor: "#1e293b", textColor: "#f8fafc",
-      borderColor: "#334155", accentColor: "#818cf8",
-      useGradient: false, headerBg: "#1e293b", headerText: "#f8fafc",
-      fontFamily: "'Space Grotesk', sans-serif", borderRadius: 10, borderWidth: 1
-    }
-  },
-  {
-    id: "modern-academic",
-    name: "Modern Academic",
-    desc: "Polished indigo SaaS",
-    palette: ["#4f46e5", "#7c3aed", "#2563eb", "#0891b2", "#059669", "#d97706", "#e11d48", "#0d9488"],
-    settings: {
-      bgColor: "#ffffff", surfaceColor: "#f8fafc", textColor: "#0f172a",
-      borderColor: "#e2e8f0", accentColor: "#4f46e5",
-      useGradient: false, headerBg: "#ffffff", headerText: "#0f172a",
-      fontFamily: "'Plus Jakarta Sans', sans-serif", borderRadius: 10, borderWidth: 1
-    }
-  },
-  {
-    id: "colorful-student",
-    name: "Colorful Student",
-    desc: "Bright energetic blocks",
-    palette: COLOR_PALETTES.vibrant.colors,
-    settings: {
-      bgColor: "#fefce8", surfaceColor: "#ffffff", textColor: "#1e293b",
-      borderColor: "#fde047", accentColor: "#ea580c",
-      useGradient: true, gradStart: "#fef9c3", gradEnd: "#e0f2fe", gradAngle: 120,
-      headerBg: "#ffffff", headerText: "#1e293b",
-      fontFamily: "'Poppins', sans-serif", borderRadius: 14, borderWidth: 1
-    }
-  },
-  {
-    id: "pink-purple",
-    name: "Pink & Purple Aesthetic",
-    desc: "Dreamy violet gradient",
-    palette: ["#ec4899", "#a855f7", "#d946ef", "#8b5cf6", "#f43f5e", "#6366f1", "#c026d3", "#db2777"],
-    settings: {
-      bgColor: "#fdf4ff", surfaceColor: "#faf5ff", textColor: "#3b0764",
-      borderColor: "#e9d5ff", accentColor: "#a855f7",
-      useGradient: true, gradStart: "#fce7f3", gradEnd: "#ede9fe", gradAngle: 135,
-      headerBg: "#ffffff", headerText: "#3b0764",
-      fontFamily: "'Poppins', sans-serif", borderRadius: 16, borderWidth: 1
-    }
-  },
-  {
-    id: "blue-professional",
-    name: "Blue Professional",
-    desc: "Executive navy & sky",
-    palette: ["#1d4ed8", "#0284c7", "#0369a1", "#2563eb", "#0f766e", "#3730a3", "#1e40af", "#0891b2"],
-    settings: {
-      bgColor: "#f0f9ff", surfaceColor: "#ffffff", textColor: "#0c4a6e",
-      borderColor: "#bae6fd", accentColor: "#0284c7",
-      useGradient: false, headerBg: "#0c4a6e", headerText: "#ffffff",
-      fontFamily: "'Inter', sans-serif", borderRadius: 8, borderWidth: 1
-    }
-  },
-  {
-    id: "green-nature",
-    name: "Green Nature Theme",
-    desc: "Calm sage & forest",
-    palette: ["#059669", "#16a34a", "#0d9488", "#65a30d", "#15803d", "#047857", "#0f766e", "#4d7c0f"],
-    settings: {
-      bgColor: "#f0fdf4", surfaceColor: "#ffffff", textColor: "#14532d",
-      borderColor: "#bbf7d0", accentColor: "#15803d",
-      useGradient: true, gradStart: "#ecfdf5", gradEnd: "#f0fdf4", gradAngle: 150,
-      headerBg: "#14532d", headerText: "#ffffff",
-      fontFamily: "'Playfair Display', serif", borderRadius: 12, borderWidth: 1
-    }
-  }
+const SUBJECT_PALETTE = [
+  "#4338ca", "#6d28d9", "#1d4ed8", "#0e7490",
+  "#047857", "#b45309", "#c2410c", "#be123c"
 ];
 
 // Application State
 let currentRotation = 0;
+let enhanceEnabled = true;
+let cropState = { top: 0, bottom: 0, left: 0, right: 0 };
 let uploadedImageEl = null;
+let lastScannedDataUrl = "";
 let uploadedFileMeta = { name: "", size: 0 };
+
 let draftSchedule = null;
 let scheduleData = null;
-let design = { ...DEFAULT_DESIGN };
-let savedDesigns = [];
-
-// Undo / Redo History (tracks design + subject colors)
-let historyStack = [];
-let historyIndex = -1;
-
-// View & Filter State
-let currentPage = "upload"; // "upload" | "review" | "dashboard"
-let isCustomizeOpen = false;
+let activeView = "grid"; // "grid" | "cards"
 let activeDayFilter = "ALL";
-let selectedSingleDay = JS_DAY_TO_KEY[new Date().getDay()] || "Mon";
+let mobileDayKey = JS_DAY_TO_KEY[new Date().getDay()] || "Mon";
 let searchQuery = "";
+let showFreeTime = true;
+let showWeekends = true;
+let hasAnimatedStats = false;
+let currentStep = "upload"; // "upload" | "review" | "dashboard" | "board"
 let confirmCallback = null;
 
-// DOM References
+// DOM References — Topbar & Stepper
 const brandLogo = document.getElementById("brandLogo");
-const navUploadBtn = document.getElementById("navUploadBtn");
-const navEditBtn = document.getElementById("navEditBtn");
-const navCustomizeBtn = document.getElementById("navCustomizeBtn");
-const navPreviewBtn = document.getElementById("navPreviewBtn");
-const navBoardBtn = document.getElementById("navBoardBtn");
-const navExportBtn = document.getElementById("navExportBtn");
-const undoBtn = document.getElementById("undoBtn");
-const redoBtn = document.getElementById("redoBtn");
+const stepScanBtn = document.getElementById("stepScanBtn");
+const stepReviewBtn = document.getElementById("stepReviewBtn");
+const stepTimetableBtn = document.getElementById("stepTimetableBtn");
+const stepExportBtn = document.getElementById("stepExportBtn");
+const navDesignBtn = document.getElementById("navDesignBtn");
+const navExportPrimaryBtn = document.getElementById("navExportPrimaryBtn");
 
-const mobHomeBtn = document.getElementById("mobHomeBtn");
-const mobScheduleBtn = document.getElementById("mobScheduleBtn");
-const mobCustomizeBtn = document.getElementById("mobCustomizeBtn");
-const mobBoardBtn = document.getElementById("mobBoardBtn");
+const mobScanBtn = document.getElementById("mobScanBtn");
+const mobTimetableBtn = document.getElementById("mobTimetableBtn");
+const mobDesignBtn = document.getElementById("mobDesignBtn");
 const mobExportBtn = document.getElementById("mobExportBtn");
 
 const uploadView = document.getElementById("uploadView");
 const reviewView = document.getElementById("reviewView");
-const workspaceView = document.getElementById("workspaceView");
+const dashboardView = document.getElementById("dashboardView");
 const designBoardView = document.getElementById("designBoardView");
-const dashboardWidgets = document.getElementById("dashboardWidgets");
-const studioLayout = document.getElementById("studioLayout");
-const customizePanel = document.getElementById("customizePanel");
-const closeCustomizeBtn = document.getElementById("closeCustomizeBtn");
-const mobilePreviewToggleBtn = document.getElementById("mobilePreviewToggleBtn");
-const toggleCustomizeBtn = document.getElementById("toggleCustomizeBtn");
-const openDesignBoardBtn = document.getElementById("openDesignBoardBtn");
 
-// Upload DOM
+// Step 1: Scan DOM
+const savedTopCard = document.getElementById("savedTopCard");
+const savedCardTitle = document.getElementById("savedCardTitle");
+const savedCardMeta = document.getElementById("savedCardMeta");
+const openSavedBtn = document.getElementById("openSavedBtn");
+
 const dropZone = document.getElementById("dropZone");
 const fileInput = document.getElementById("fileInput");
 const cameraInput = document.getElementById("cameraInput");
 const replaceFileInput = document.getElementById("replaceFileInput");
+const errorReplaceInput = document.getElementById("errorReplaceInput");
 const sampleBtn = document.getElementById("sampleBtn");
 const manualStartBtn = document.getElementById("manualStartBtn");
+
 const previewPanel = document.getElementById("previewPanel");
 const previewImg = document.getElementById("previewImg");
 const previewFileName = document.getElementById("previewFileName");
 const previewFileMeta = document.getElementById("previewFileMeta");
 const rotateLeftBtn = document.getElementById("rotateLeftBtn");
 const rotateRightBtn = document.getElementById("rotateRightBtn");
+const toggleCropBtn = document.getElementById("toggleCropBtn");
+const toggleEnhanceBtn = document.getElementById("toggleEnhanceBtn");
 const removeImgBtn = document.getElementById("removeImgBtn");
+const cropControlsBar = document.getElementById("cropControlsBar");
+const cropTop = document.getElementById("cropTop");
+const cropBottom = document.getElementById("cropBottom");
+const cropLeft = document.getElementById("cropLeft");
+const cropRight = document.getElementById("cropRight");
+const resetCropBtn = document.getElementById("resetCropBtn");
+const scanLaserOverlay = document.getElementById("scanLaserOverlay");
+const stagedProgressPanel = document.getElementById("stagedProgressPanel");
+const stageStepsList = document.getElementById("stageStepsList");
+const previewFooter = document.getElementById("previewFooter");
 const scanBtn = document.getElementById("scanBtn");
-const loadingPanel = document.getElementById("loadingPanel");
-const loadingTitle = document.getElementById("loadingTitle");
-const loadingSubtitle = document.getElementById("loadingSubtitle");
 const scanErrorPanel = document.getElementById("scanErrorPanel");
 const scanErrorMessage = document.getElementById("scanErrorMessage");
 const retryScanBtn = document.getElementById("retryScanBtn");
-const savedBanner = document.getElementById("savedBanner");
-const openSavedBtn = document.getElementById("openSavedBtn");
-const openSavedCustomizeBtn = document.getElementById("openSavedCustomizeBtn");
-const homeTemplatesGrid = document.getElementById("homeTemplatesGrid");
+const errorManualBtn = document.getElementById("errorManualBtn");
 
-// Review DOM
+// Step 2: Review DOM
 const reviewBackBtn = document.getElementById("reviewBackBtn");
+const reviewBackBtnMobile = document.getElementById("reviewBackBtnMobile");
+const confirmScheduleBtnTop = document.getElementById("confirmScheduleBtnTop");
 const confirmScheduleBtn = document.getElementById("confirmScheduleBtn");
-const confirmToCustomizeBtn = document.getElementById("confirmToCustomizeBtn");
-const reviewSummaryBanner = document.getElementById("reviewSummaryBanner");
-const reviewSummaryTitle = document.getElementById("reviewSummaryTitle");
-const reviewSummaryText = document.getElementById("reviewSummaryText");
+const reviewSummaryStats = document.getElementById("reviewSummaryStats");
+const reviewAddRowBtn = document.getElementById("reviewAddRowBtn");
+const reviewMobileTabs = document.getElementById("reviewMobileTabs");
+const reviewImagePane = document.getElementById("reviewImagePane");
+const reviewResultsPane = document.getElementById("reviewResultsPane");
+const reviewSourceImg = document.getElementById("reviewSourceImg");
+const reviewImgEmpty = document.getElementById("reviewImgEmpty");
+const reviewHighlightBand = document.getElementById("reviewHighlightBand");
 const revInstitution = document.getElementById("revInstitution");
 const revTitle = document.getElementById("revTitle");
-const revStudent = document.getElementById("revStudent");
-const revSection = document.getElementById("revSection");
-const revSemester = document.getElementById("revSemester");
-const reviewCount = document.getElementById("reviewCount");
-const reviewAddRowBtn = document.getElementById("reviewAddRowBtn");
+const revMeta = document.getElementById("revMeta");
 const reviewRowsContainer = document.getElementById("reviewRowsContainer");
 
-// Dashboard Status & Stats DOM
+// Step 3: Timetable DOM
 const currentStatusBadge = document.getElementById("currentStatusBadge");
 const currentStatusLabel = document.getElementById("currentStatusLabel");
 const liveClock = document.getElementById("liveClock");
 const currentClassBody = document.getElementById("currentClassBody");
 const upcomingCountdown = document.getElementById("upcomingCountdown");
 const upcomingClassBody = document.getElementById("upcomingClassBody");
+
 const statSubjects = document.getElementById("statSubjects");
 const statSessions = document.getElementById("statSessions");
 const statHours = document.getElementById("statHours");
@@ -276,89 +128,39 @@ const statBusiest = document.getElementById("statBusiest");
 const statBusiestSub = document.getElementById("statBusiestSub");
 const statFreeDays = document.getElementById("statFreeDays");
 const statFreeDaysSub = document.getElementById("statFreeDaysSub");
+
 const conflictBanner = document.getElementById("conflictBanner");
 const conflictTitle = document.getElementById("conflictTitle");
 const conflictList = document.getElementById("conflictList");
 
-// Customize Panel DOM
-const templateCardsStrip = document.getElementById("templateCardsStrip");
-const paletteButtons = document.getElementById("paletteButtons");
-const custBgColor = document.getElementById("custBgColor");
-const custSurfaceColor = document.getElementById("custSurfaceColor");
-const custTextColor = document.getElementById("custTextColor");
-const custBorderColor = document.getElementById("custBorderColor");
-const custAccentColor = document.getElementById("custAccentColor");
-const custUseGradient = document.getElementById("custUseGradient");
-const gradientControls = document.getElementById("gradientControls");
-const custGradStart = document.getElementById("custGradStart");
-const custGradEnd = document.getElementById("custGradEnd");
-const custGradAngle = document.getElementById("custGradAngle");
-const valGradAngle = document.getElementById("valGradAngle");
-const autoAssignColorsBtn = document.getElementById("autoAssignColorsBtn");
-const subjectColorsList = document.getElementById("subjectColorsList");
-
-const custFontFamily = document.getElementById("custFontFamily");
-const custFontWeight = document.getElementById("custFontWeight");
-const custAlignGroup = document.getElementById("custAlignGroup");
-const custCodeSize = document.getElementById("custCodeSize");
-const custTitleSize = document.getElementById("custTitleSize");
-const custRoomSize = document.getElementById("custRoomSize");
-const custTimeSize = document.getElementById("custTimeSize");
-const valCodeSize = document.getElementById("valCodeSize");
-const valTitleSize = document.getElementById("valTitleSize");
-const valRoomSize = document.getElementById("valRoomSize");
-const valTimeSize = document.getElementById("valTimeSize");
-
-const custLayoutGroup = document.getElementById("custLayoutGroup");
-const custTimeFmtGroup = document.getElementById("custTimeFmtGroup");
-const custHourHeight = document.getElementById("custHourHeight");
-const custBlockGap = document.getElementById("custBlockGap");
-const custBorderRadius = document.getElementById("custBorderRadius");
-const custBorderWidth = document.getElementById("custBorderWidth");
-const valHourHeight = document.getElementById("valHourHeight");
-const valBlockGap = document.getElementById("valBlockGap");
-const valBorderRadius = document.getElementById("valBorderRadius");
-const valBorderWidth = document.getElementById("valBorderWidth");
-const custShowWeekends = document.getElementById("custShowWeekends");
-const custShowFreeTime = document.getElementById("custShowFreeTime");
-
-const custInstName = document.getElementById("custInstName");
-const custSchedTitle = document.getElementById("custSchedTitle");
-const custStudentName = document.getElementById("custStudentName");
-const custCourseSection = document.getElementById("custCourseSection");
-const custSemester = document.getElementById("custSemester");
-const custHeaderBg = document.getElementById("custHeaderBg");
-const custHeaderText = document.getElementById("custHeaderText");
-const logoUploadInput = document.getElementById("logoUploadInput");
-const removeLogoBtn = document.getElementById("removeLogoBtn");
-
-const saveDesignNameInput = document.getElementById("saveDesignNameInput");
-const saveDesignBtn = document.getElementById("saveDesignBtn");
-const savedDesignsList = document.getElementById("savedDesignsList");
-const resetDesignBtn = document.getElementById("resetDesignBtn");
-
-// Toolbar & Preview Canvas DOM
+const viewGridBtn = document.getElementById("viewGridBtn");
+const viewCardsBtn = document.getElementById("viewCardsBtn");
 const searchInput = document.getElementById("searchInput");
+const themeSelect = document.getElementById("themeSelect");
+const viewOptionsBtn = document.getElementById("viewOptionsBtn");
+const viewOptionsPopover = document.getElementById("viewOptionsPopover");
+const toggleFreeTime = document.getElementById("toggleFreeTime");
+const toggleWeekends = document.getElementById("toggleWeekends");
+const bulkEditBtn = document.getElementById("bulkEditBtn");
+const openDesignFromPopBtn = document.getElementById("openDesignFromPopBtn");
 const addClassBtn = document.getElementById("addClassBtn");
+const fabAddClass = document.getElementById("fabAddClass");
+const openExportBtn = document.getElementById("openExportBtn");
 const dayFilterPills = document.getElementById("dayFilterPills");
-const quickToggleWeekendsBtn = document.getElementById("quickToggleWeekendsBtn");
-const printPreviewBtn = document.getElementById("printPreviewBtn");
+const jumpTodayChip = document.getElementById("jumpTodayChip");
 
 const captureArea = document.getElementById("captureArea");
-const headerLogoImg = document.getElementById("headerLogoImg");
 const headerInstitution = document.getElementById("headerInstitution");
 const headerTitle = document.getElementById("headerTitle");
-const headerStudent = document.getElementById("headerStudent");
-const headerSubMeta = document.getElementById("headerSubMeta");
-const singleDayBar = document.getElementById("singleDayBar");
-const prevDayBtn = document.getElementById("prevDayBtn");
-const nextDayBtn = document.getElementById("nextDayBtn");
-const singleDayTabs = document.getElementById("singleDayTabs");
+const headerMeta = document.getElementById("headerMeta");
+const mobileDayRailHeader = document.getElementById("mobileDayRailHeader");
+const mobPrevDayBtn = document.getElementById("mobPrevDayBtn");
+const mobNextDayBtn = document.getElementById("mobNextDayBtn");
+const mobActiveDayLabel = document.getElementById("mobActiveDayLabel");
 const gridView = document.getElementById("gridView");
 const cardsView = document.getElementById("cardsView");
-const singleDayView = document.getElementById("singleDayView");
 
-// Modals DOM
+// Modals & Overlays
 const classModal = document.getElementById("classModal");
 const modalTitle = document.getElementById("modalTitle");
 const closeModalX = document.getElementById("closeModalX");
@@ -379,7 +181,6 @@ const closeModalBtn = document.getElementById("closeModalBtn");
 
 const exportModal = document.getElementById("exportModal");
 const closeExportX = document.getElementById("closeExportX");
-const exportQuality = document.getElementById("exportQuality");
 const exportPngBtn = document.getElementById("exportPngBtn");
 const exportPdfBtn = document.getElementById("exportPdfBtn");
 const exportPrintBtn = document.getElementById("exportPrintBtn");
@@ -389,224 +190,150 @@ const confirmTitle = document.getElementById("confirmTitle");
 const confirmMessage = document.getElementById("confirmMessage");
 const confirmCancelBtn = document.getElementById("confirmCancelBtn");
 const confirmOkBtn = document.getElementById("confirmOkBtn");
+
+const successOverlay = document.getElementById("successOverlay");
+const successOverlayText = document.getElementById("successOverlayText");
 const toastContainer = document.getElementById("toastContainer");
 
 /* ==========================================================================
    INITIALIZATION
    ========================================================================== */
 function init() {
-  // Load saved design
-  try {
-    const rawDesign = localStorage.getItem("schedsnap_design");
-    if (rawDesign) design = { ...DEFAULT_DESIGN, ...JSON.parse(rawDesign) };
-  } catch { design = { ...DEFAULT_DESIGN }; }
+  buildClassModalSwatches();
 
-  // Load saved design presets
-  try {
-    const rawSaved = localStorage.getItem("schedsnap_saved_designs");
-    if (rawSaved) savedDesigns = JSON.parse(rawSaved);
-  } catch { savedDesigns = []; }
-
-  // Default to Single-Day view on small phones if user hasn't picked a layout yet
-  if (window.innerWidth < 640 && !localStorage.getItem("schedsnap_design")) {
-    design.layout = "day";
+  const savedTheme = localStorage.getItem("schedsnap_theme");
+  if (savedTheme) {
+    themeSelect.value = savedTheme;
+    captureArea.setAttribute("data-theme", savedTheme);
   }
 
-  buildTemplateCards();
-  buildPaletteButtons();
-  buildClassModalSwatches();
-  renderSavedDesignsList();
-
-  // Load saved schedule
   const saved = localStorage.getItem("schedsnap_data");
   if (saved) {
     try {
       scheduleData = normalizeSchedule(JSON.parse(saved));
-      savedBanner.classList.remove("hidden");
-      syncCustomizeControls();
-      pushHistory();
-      openWorkspace(false);
+      updateSavedHomeCard();
     } catch {
       localStorage.removeItem("schedsnap_data");
-      navigateTo("upload");
     }
-  } else {
-    syncCustomizeControls();
-    navigateTo("upload");
   }
 
+  navigateTo("upload");
   updateLiveStatus();
   setInterval(updateLiveStatus, 30000);
+  setupMobileSwipeOnGrid();
+}
+
+function updateSavedHomeCard() {
+  if (!scheduleData || !scheduleData.classes.length) {
+    savedTopCard.classList.add("hidden");
+    return;
+  }
+  savedTopCard.classList.remove("hidden");
+  savedCardTitle.textContent = scheduleData.title || "Your Saved Timetable";
+  const count = scheduleData.classes.length;
+  savedCardMeta.textContent = `${scheduleData.institution || "Saved Schedule"} · ${count} course${count !== 1 ? "s" : ""}`;
 }
 
 /* ==========================================================================
-   NAVIGATION & MOBILE BOTTOM NAV
+   PHASE 1: NAVIGATION & CLICKABLE PROGRESS STEPPER
    ========================================================================== */
+function updateStepperUI() {
+  const hasReview = Boolean(draftSchedule || scheduleData);
+  const hasTimetable = Boolean(scheduleData && scheduleData.classes.length);
+
+  const steps = [
+    { el: stepScanBtn, key: "upload", unlocked: true, completed: currentStep !== "upload" },
+    { el: stepReviewBtn, key: "review", unlocked: hasReview, completed: hasTimetable && currentStep === "dashboard" },
+    { el: stepTimetableBtn, key: "dashboard", unlocked: hasTimetable, completed: false },
+    { el: stepExportBtn, key: "export", unlocked: hasTimetable, completed: false }
+  ];
+
+  steps.forEach((s) => {
+    s.el.classList.toggle("active", currentStep === s.key);
+    s.el.classList.toggle("completed", s.completed && currentStep !== s.key);
+    s.el.classList.toggle("locked", !s.unlocked);
+    s.el.setAttribute("aria-disabled", String(!s.unlocked));
+  });
+
+  navExportPrimaryBtn.classList.toggle("hidden", !hasTimetable || currentStep === "upload");
+
+  document.querySelectorAll(".mob-nav-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.mob === currentStep);
+  });
+}
+
 function navigateTo(target) {
+  viewOptionsPopover.classList.add("hidden");
+  viewOptionsBtn.setAttribute("aria-expanded", "false");
+
+  if (target === "export") {
+    if (!scheduleData || !scheduleData.classes.length) {
+      showToast("Generate a timetable first before exporting.", "info");
+      return;
+    }
+    openExportModal();
+    return;
+  }
+
   uploadView.classList.add("hidden");
   reviewView.classList.add("hidden");
-  workspaceView.classList.add("hidden");
-  if (designBoardView) designBoardView.classList.add("hidden");
+  dashboardView.classList.add("hidden");
+  designBoardView.classList.add("hidden");
 
   if (target === "upload") {
-    currentPage = "upload";
-    isCustomizeOpen = false;
+    currentStep = "upload";
     uploadView.classList.remove("hidden");
-    savedBanner.classList.toggle("hidden", !scheduleData);
+    updateSavedHomeCard();
   } else if (target === "review") {
-    if (!scheduleData && !draftSchedule) {
-      loadSampleSchedule(false);
+    if (!draftSchedule && !scheduleData) {
+      showToast("Upload a form or build manually first.", "info");
+      return navigateTo("upload");
     }
-    currentPage = "review";
-    isCustomizeOpen = false;
+    currentStep = "review";
     openReviewStep(draftSchedule || scheduleData);
-  } else if (target === "customize") {
-    if (!scheduleData) loadSampleSchedule(false);
-    openWorkspace(true);
+  } else if (target === "dashboard") {
+    if (!scheduleData || !scheduleData.classes.length) {
+      showToast("Upload a schedule or try the sample schedule first.", "info");
+      return navigateTo("upload");
+    }
+    currentStep = "dashboard";
+    dashboardView.classList.remove("hidden");
+    renderDashboard();
   } else if (target === "board") {
-    currentPage = "board";
-    isCustomizeOpen = false;
-    if (designBoardView) designBoardView.classList.remove("hidden");
+    currentStep = "board";
+    designBoardView.classList.remove("hidden");
     if (window.DesignBoard && typeof window.DesignBoard.onOpen === "function") {
       window.DesignBoard.onOpen();
     }
-  } else if (target === "dashboard") {
-    if (!scheduleData) {
-      showToast("Upload a schedule or try the sample schedule first.", "info");
-      navigateTo("upload");
-      return;
-    }
-    openWorkspace(false);
   }
 
-  updateNavActiveState();
+  updateStepperUI();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function openWorkspace(openCust) {
-  currentPage = "dashboard";
-  isCustomizeOpen = Boolean(openCust);
-  uploadView.classList.add("hidden");
-  reviewView.classList.add("hidden");
-  if (designBoardView) designBoardView.classList.add("hidden");
-  workspaceView.classList.remove("hidden");
-
-  customizePanel.classList.toggle("hidden", !isCustomizeOpen);
-  studioLayout.classList.toggle("customize-open", isCustomizeOpen);
-  dashboardWidgets.classList.toggle("hidden", isCustomizeOpen && window.innerWidth >= 960);
-
-  syncCustomizeControls();
-  applyDesignToCanvas();
-  renderDashboard();
-  updateNavActiveState();
-}
-
-function updateNavActiveState() {
-  const activeKey = isCustomizeOpen && currentPage === "dashboard" ? "customize" : currentPage;
-  document.querySelectorAll(".nav-tab").forEach((b) => {
-    b.classList.toggle("active", b.dataset.nav === activeKey);
-  });
-  document.querySelectorAll(".mob-nav-btn").forEach((b) => {
-    b.classList.toggle("active", b.dataset.mobNav === activeKey);
-  });
-}
-
-// Desktop & Mobile nav listeners
+// Stepper & Nav Listeners
 brandLogo.addEventListener("click", () => navigateTo("upload"));
-navUploadBtn.addEventListener("click", () => navigateTo("upload"));
-navEditBtn.addEventListener("click", () => navigateTo("review"));
-navCustomizeBtn.addEventListener("click", () => navigateTo("customize"));
-navPreviewBtn.addEventListener("click", () => navigateTo("dashboard"));
-navExportBtn.addEventListener("click", () => openExportModal());
+stepScanBtn.addEventListener("click", () => navigateTo("upload"));
+stepReviewBtn.addEventListener("click", () => {
+  if (!stepReviewBtn.classList.contains("locked")) navigateTo("review");
+});
+stepTimetableBtn.addEventListener("click", () => {
+  if (!stepTimetableBtn.classList.contains("locked")) navigateTo("dashboard");
+});
+stepExportBtn.addEventListener("click", () => {
+  if (!stepExportBtn.classList.contains("locked")) navigateTo("export");
+});
+navDesignBtn.addEventListener("click", () => navigateTo("board"));
+navExportPrimaryBtn.addEventListener("click", () => navigateTo("export"));
+openSavedBtn.addEventListener("click", () => navigateTo("dashboard"));
 
-mobHomeBtn.addEventListener("click", () => navigateTo("upload"));
-mobScheduleBtn.addEventListener("click", () => navigateTo("dashboard"));
-mobCustomizeBtn.addEventListener("click", () => navigateTo("customize"));
-mobExportBtn.addEventListener("click", () => openExportModal());
-
-toggleCustomizeBtn.addEventListener("click", () => openWorkspace(!isCustomizeOpen));
-closeCustomizeBtn.addEventListener("click", () => openWorkspace(false));
-mobilePreviewToggleBtn.addEventListener("click", () => openWorkspace(false));
-openSavedBtn.addEventListener("click", () => openWorkspace(false));
-openSavedCustomizeBtn.addEventListener("click", () => openWorkspace(true));
+mobScanBtn.addEventListener("click", () => navigateTo("upload"));
+mobTimetableBtn.addEventListener("click", () => navigateTo("dashboard"));
+mobDesignBtn.addEventListener("click", () => navigateTo("board"));
+mobExportBtn.addEventListener("click", () => navigateTo("export"));
 
 /* ==========================================================================
-   UNDO / REDO HISTORY
-   ========================================================================== */
-function getSnapshot() {
-  return JSON.stringify({
-    design,
-    classColors: scheduleData ? scheduleData.classes.map((c) => c.color) : []
-  });
-}
-
-function pushHistory() {
-  const snap = getSnapshot();
-  if (historyIndex >= 0 && historyStack[historyIndex] === snap) return;
-  historyStack = historyStack.slice(0, historyIndex + 1);
-  historyStack.push(snap);
-  if (historyStack.length > 40) historyStack.shift();
-  historyIndex = historyStack.length - 1;
-  updateHistoryButtons();
-}
-
-function applyHistorySnapshot(snapStr) {
-  const parsed = JSON.parse(snapStr);
-  design = { ...DEFAULT_DESIGN, ...parsed.design };
-  if (scheduleData && Array.isArray(parsed.classColors)) {
-    scheduleData.classes.forEach((c, i) => {
-      if (parsed.classColors[i]) c.color = parsed.classColors[i];
-    });
-    saveSchedule();
-  }
-  saveDesign();
-  syncCustomizeControls();
-  applyDesignToCanvas();
-  renderDashboard();
-  updateHistoryButtons();
-}
-
-function updateHistoryButtons() {
-  undoBtn.disabled = historyIndex <= 0;
-  redoBtn.disabled = historyIndex >= historyStack.length - 1;
-}
-
-undoBtn.addEventListener("click", () => {
-  if (historyIndex > 0) {
-    historyIndex--;
-    applyHistorySnapshot(historyStack[historyIndex]);
-    showToast("Undid design change.", "info");
-  }
-});
-
-redoBtn.addEventListener("click", () => {
-  if (historyIndex < historyStack.length - 1) {
-    historyIndex++;
-    applyHistorySnapshot(historyStack[historyIndex]);
-    showToast("Redid design change.", "info");
-  }
-});
-
-document.addEventListener("keydown", (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
-    if (document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
-      e.preventDefault();
-      undoBtn.click();
-    }
-  } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "y" || (e.shiftKey && e.key.toLowerCase() === "z"))) {
-    if (document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
-      e.preventDefault();
-      redoBtn.click();
-    }
-  } else if (e.key === "Escape") {
-    classModal.classList.add("hidden");
-    exportModal.classList.add("hidden");
-    confirmModal.classList.add("hidden");
-  }
-});
-
-/* ==========================================================================
-   TOASTS & CONFIRM DIALOG
+   TOASTS, CONFIRM DIALOG, & SUCCESS CHECKMARK MICRO-ANIMATION
    ========================================================================== */
 function showToast(message, type = "info") {
   const el = document.createElement("div");
@@ -615,9 +342,15 @@ function showToast(message, type = "info") {
   toastContainer.appendChild(el);
   setTimeout(() => {
     el.style.opacity = "0";
-    el.style.transition = "opacity 0.25s";
-    setTimeout(() => el.remove(), 250);
+    el.style.transition = "opacity 0.22s";
+    setTimeout(() => el.remove(), 220);
   }, 2800);
+}
+
+function showSuccessCheck(label = "Saved!") {
+  successOverlayText.textContent = label;
+  successOverlay.classList.remove("hidden");
+  setTimeout(() => successOverlay.classList.add("hidden"), 1150);
 }
 
 function openConfirm(title, message, onConfirm) {
@@ -634,564 +367,158 @@ confirmOkBtn.addEventListener("click", () => {
 });
 
 /* ==========================================================================
-   TEMPLATES, PALETTES, & CUSTOMIZE STUDIO CONTROLS
-   ========================================================================== */
-function createTemplateCardEl(tpl, onClick) {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = `template-card ${design.templateId === tpl.id ? "active" : ""}`;
-  btn.dataset.tplId = tpl.id;
-  const bgStyle = tpl.settings.useGradient
-    ? `background: linear-gradient(${tpl.settings.gradAngle || 135}deg, ${tpl.settings.gradStart}, ${tpl.settings.gradEnd})`
-    : `background: ${tpl.settings.bgColor}`;
-
-  btn.innerHTML = `
-    <div class="tpl-preview-box" style="${bgStyle}">
-      <div class="tpl-preview-bar" style="background:${tpl.settings.accentColor}"></div>
-      <div class="tpl-preview-blocks">
-        <span style="background:${tpl.palette[0]}"></span>
-        <span style="background:${tpl.palette[1]}"></span>
-        <span style="background:${tpl.palette[2]}"></span>
-      </div>
-    </div>
-    <span class="tpl-name">${escapeHtml(tpl.name)}</span>
-    <span class="tpl-desc">${escapeHtml(tpl.desc)}</span>
-  `;
-  btn.addEventListener("click", () => onClick(tpl));
-  return btn;
-}
-
-function buildTemplateCards() {
-  templateCardsStrip.innerHTML = "";
-  homeTemplatesGrid.innerHTML = "";
-
-  DESIGN_TEMPLATES.forEach((tpl) => {
-    templateCardsStrip.appendChild(createTemplateCardEl(tpl, (t) => applyTemplate(t, true)));
-    homeTemplatesGrid.appendChild(createTemplateCardEl(tpl, (t) => {
-      if (!scheduleData) loadSampleSchedule(false);
-      applyTemplate(t, true);
-      openWorkspace(true);
-    }));
-  });
-}
-
-function applyTemplate(tpl, recordHistory = true) {
-  design = { ...design, ...tpl.settings, templateId: tpl.id };
-  if (scheduleData) {
-    assignPaletteToSubjects(tpl.palette);
-  }
-  saveDesign();
-  syncCustomizeControls();
-  applyDesignToCanvas();
-  renderDashboard();
-  if (recordHistory) pushHistory();
-  showToast(`Applied "${tpl.name}" template.`, "success");
-}
-
-function assignPaletteToSubjects(paletteColors) {
-  if (!scheduleData) return;
-  const codeMap = {};
-  let idx = 0;
-  scheduleData.classes.forEach((cls) => {
-    const key = (cls.code || `ITEM_${idx}`).toUpperCase();
-    if (!codeMap[key]) {
-      codeMap[key] = paletteColors[idx % paletteColors.length];
-      idx++;
-    }
-    cls.color = codeMap[key];
-  });
-  saveSchedule();
-}
-
-function buildPaletteButtons() {
-  paletteButtons.innerHTML = "";
-  Object.entries(COLOR_PALETTES).forEach(([key, pal]) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "palette-chip";
-    btn.innerHTML = `
-      <span class="palette-dots">
-        <i style="background:${pal.colors[0]}"></i>
-        <i style="background:${pal.colors[1]}"></i>
-        <i style="background:${pal.colors[2]}"></i>
-      </span>
-      <span>${pal.label}</span>
-    `;
-    btn.addEventListener("click", () => {
-      assignPaletteToSubjects(pal.colors);
-      renderSubjectColorsList();
-      renderDashboard();
-      pushHistory();
-      showToast(`Applied ${pal.label} color palette.`, "success");
-    });
-    paletteButtons.appendChild(btn);
-  });
-}
-
-function renderSubjectColorsList() {
-  subjectColorsList.innerHTML = "";
-  if (!scheduleData || !scheduleData.classes.length) {
-    subjectColorsList.innerHTML = `<p class="muted" style="font-size:0.78rem;">Add classes to customize subject colors.</p>`;
-    return;
-  }
-
-  const seen = new Map();
-  scheduleData.classes.forEach((cls) => {
-    const key = (cls.code || "Untitled").trim();
-    if (!seen.has(key.toUpperCase())) {
-      seen.set(key.toUpperCase(), { label: key, color: cls.color || "#4f46e5" });
-    }
-  });
-
-  seen.forEach((info, keyUpper) => {
-    const row = document.createElement("div");
-    row.className = "subj-color-row";
-    row.innerHTML = `
-      <span><strong>${escapeHtml(info.label)}</strong></span>
-      <input type="color" value="${info.color}" aria-label="Color for ${escapeHtml(info.label)}" />
-    `;
-    const input = row.querySelector("input");
-    input.addEventListener("input", (e) => {
-      const hex = e.target.value;
-      scheduleData.classes.forEach((c) => {
-        if ((c.code || "Untitled").trim().toUpperCase() === keyUpper) c.color = hex;
-      });
-      saveSchedule();
-      renderDashboard();
-    });
-    input.addEventListener("change", () => pushHistory());
-    subjectColorsList.appendChild(row);
-  });
-}
-
-autoAssignColorsBtn.addEventListener("click", () => {
-  const uniquePalette = [
-    "#4f46e5", "#ec4899", "#0ea5e9", "#10b981", "#f59e0b",
-    "#8b5cf6", "#ef4444", "#14b8a6", "#f97316", "#6366f1", "#84cc16", "#d946ef"
-  ];
-  assignPaletteToSubjects(uniquePalette);
-  renderSubjectColorsList();
-  renderDashboard();
-  pushHistory();
-  showToast("Assigned unique colors to every subject.", "success");
-});
-
-function syncCustomizeControls() {
-  custBgColor.value = design.bgColor;
-  custSurfaceColor.value = design.surfaceColor;
-  custTextColor.value = design.textColor;
-  custBorderColor.value = design.borderColor;
-  custAccentColor.value = design.accentColor;
-  custUseGradient.checked = design.useGradient;
-  gradientControls.classList.toggle("hidden", !design.useGradient);
-  custGradStart.value = design.gradStart;
-  custGradEnd.value = design.gradEnd;
-  custGradAngle.value = design.gradAngle;
-  valGradAngle.textContent = `${design.gradAngle}°`;
-
-  custFontFamily.value = design.fontFamily;
-  custFontWeight.value = String(design.fontWeight);
-  custCodeSize.value = design.codeSize; valCodeSize.textContent = `${design.codeSize}px`;
-  custTitleSize.value = design.titleSize; valTitleSize.textContent = `${design.titleSize}px`;
-  custRoomSize.value = design.roomSize; valRoomSize.textContent = `${design.roomSize}px`;
-  custTimeSize.value = design.timeSize; valTimeSize.textContent = `${design.timeSize}px`;
-
-  custHourHeight.value = design.hourHeight; valHourHeight.textContent = `${design.hourHeight}px`;
-  custBlockGap.value = design.blockGap; valBlockGap.textContent = `${design.blockGap}px`;
-  custBorderRadius.value = design.borderRadius; valBorderRadius.textContent = `${design.borderRadius}px`;
-  custBorderWidth.value = design.borderWidth; valBorderWidth.textContent = `${design.borderWidth}px`;
-  custShowWeekends.checked = design.showWeekends;
-  custShowFreeTime.checked = design.showFreeTime;
-  quickToggleWeekendsBtn.textContent = design.showWeekends ? "Hide Weekends" : "Show Weekends";
-
-  custHeaderBg.value = design.headerBg;
-  custHeaderText.value = design.headerText;
-  removeLogoBtn.classList.toggle("hidden", !design.logoDataUrl);
-
-  if (scheduleData) {
-    custInstName.value = scheduleData.institution || "";
-    custSchedTitle.value = scheduleData.title || "";
-    custStudentName.value = scheduleData.studentName || "";
-    custCourseSection.value = scheduleData.courseSection || "";
-    custSemester.value = scheduleData.semester || "";
-  }
-
-  // Active states on segmented controls & template cards
-  custAlignGroup.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.align === design.textAlign));
-  custLayoutGroup.querySelectorAll(".layout-opt-btn").forEach((b) => b.classList.toggle("active", b.dataset.layout === design.layout));
-  custTimeFmtGroup.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.fmt === design.timeFormat));
-  document.querySelectorAll("[data-quick-layout]").forEach((b) => b.classList.toggle("active", b.dataset.quickLayout === design.layout));
-  document.querySelectorAll(".template-card").forEach((c) => c.classList.toggle("active", c.dataset.tplId === design.templateId));
-
-  renderSubjectColorsList();
-}
-
-function applyDesignToCanvas() {
-  const s = captureArea.style;
-  s.setProperty("--tt-bg", design.bgColor);
-  s.setProperty(
-    "--tt-bg-image",
-    design.useGradient ? `linear-gradient(${design.gradAngle}deg, ${design.gradStart}, ${design.gradEnd})` : "none"
-  );
-  s.setProperty("--tt-surface", design.surfaceColor);
-  s.setProperty("--tt-text", design.textColor);
-  s.setProperty("--tt-muted", design.textColor + "99");
-  s.setProperty("--tt-border", design.borderColor);
-  s.setProperty("--tt-accent", design.accentColor);
-  s.setProperty("--tt-header-bg", design.headerBg);
-  s.setProperty("--tt-header-text", design.headerText);
-  s.setProperty("--tt-font", design.fontFamily);
-  s.setProperty("--tt-weight", design.fontWeight);
-  s.setProperty("--tt-align", design.textAlign);
-  s.setProperty("--tt-code-size", `${design.codeSize}px`);
-  s.setProperty("--tt-title-size", `${design.titleSize}px`);
-  s.setProperty("--tt-room-size", `${design.roomSize}px`);
-  s.setProperty("--tt-time-size", `${design.timeSize}px`);
-  s.setProperty("--tt-radius", `${design.borderRadius}px`);
-  s.setProperty("--tt-border-w", `${design.borderWidth}px`);
-  s.setProperty("--tt-gap", `${design.blockGap}px`);
-
-  const effectiveHourH = design.layout === "compact" ? Math.max(40, Math.round(design.hourHeight * 0.72)) : design.hourHeight;
-  s.setProperty("--tt-hour-h", `${effectiveHourH}px`);
-
-  if (design.logoDataUrl) {
-    headerLogoImg.src = design.logoDataUrl;
-    headerLogoImg.classList.remove("hidden");
-  } else {
-    headerLogoImg.classList.add("hidden");
-  }
-}
-
-function updateDesignProp(prop, value, shouldRender = false, record = false) {
-  design[prop] = value;
-  saveDesign();
-  applyDesignToCanvas();
-  if (shouldRender) renderDashboard();
-  if (record) pushHistory();
-}
-
-function saveDesign() {
-  localStorage.setItem("schedsnap_design", JSON.stringify(design));
-}
-
-// Bind live color, typography, & layout controls
-const liveColorMap = [
-  [custBgColor, "bgColor"], [custSurfaceColor, "surfaceColor"],
-  [custTextColor, "textColor"], [custBorderColor, "borderColor"],
-  [custAccentColor, "accentColor"], [custGradStart, "gradStart"],
-  [custGradEnd, "gradEnd"], [custHeaderBg, "headerBg"], [custHeaderText, "headerText"]
-];
-liveColorMap.forEach(([el, key]) => {
-  el.addEventListener("input", (e) => updateDesignProp(key, e.target.value, false, false));
-  el.addEventListener("change", () => pushHistory());
-});
-
-custUseGradient.addEventListener("change", (e) => {
-  gradientControls.classList.toggle("hidden", !e.target.checked);
-  updateDesignProp("useGradient", e.target.checked, false, true);
-});
-custGradAngle.addEventListener("input", (e) => {
-  valGradAngle.textContent = `${e.target.value}°`;
-  updateDesignProp("gradAngle", Number(e.target.value), false, false);
-});
-custGradAngle.addEventListener("change", () => pushHistory());
-
-custFontFamily.addEventListener("change", (e) => updateDesignProp("fontFamily", e.target.value, false, true));
-custFontWeight.addEventListener("change", (e) => updateDesignProp("fontWeight", e.target.value, false, true));
-
-custAlignGroup.addEventListener("click", (e) => {
-  const btn = e.target.closest(".seg-btn");
-  if (!btn) return;
-  updateDesignProp("textAlign", btn.dataset.align, false, true);
-  syncCustomizeControls();
-});
-
-[
-  [custCodeSize, valCodeSize, "codeSize", false],
-  [custTitleSize, valTitleSize, "titleSize", false],
-  [custRoomSize, valRoomSize, "roomSize", false],
-  [custTimeSize, valTimeSize, "timeSize", false],
-  [custHourHeight, valHourHeight, "hourHeight", true],
-  [custBlockGap, valBlockGap, "blockGap", true],
-  [custBorderRadius, valBorderRadius, "borderRadius", false],
-  [custBorderWidth, valBorderWidth, "borderWidth", false]
-].forEach(([el, labelEl, key, rerender]) => {
-  el.addEventListener("input", (e) => {
-    labelEl.textContent = `${e.target.value}px`;
-    updateDesignProp(key, Number(e.target.value), rerender, false);
-  });
-  el.addEventListener("change", () => pushHistory());
-});
-
-function setLayoutMode(mode) {
-  design.layout = mode;
-  saveDesign();
-  syncCustomizeControls();
-  applyDesignToCanvas();
-  renderDashboard();
-  pushHistory();
-}
-
-custLayoutGroup.addEventListener("click", (e) => {
-  const btn = e.target.closest(".layout-opt-btn");
-  if (btn) setLayoutMode(btn.dataset.layout);
-});
-document.querySelectorAll("[data-quick-layout]").forEach((btn) => {
-  btn.addEventListener("click", () => setLayoutMode(btn.dataset.quickLayout));
-});
-
-custTimeFmtGroup.addEventListener("click", (e) => {
-  const btn = e.target.closest(".seg-btn");
-  if (!btn) return;
-  updateDesignProp("timeFormat", btn.dataset.fmt, true, true);
-  syncCustomizeControls();
-});
-
-custShowWeekends.addEventListener("change", (e) => {
-  updateDesignProp("showWeekends", e.target.checked, true, true);
-  quickToggleWeekendsBtn.textContent = e.target.checked ? "Hide Weekends" : "Show Weekends";
-});
-quickToggleWeekendsBtn.addEventListener("click", () => {
-  custShowWeekends.checked = !design.showWeekends;
-  updateDesignProp("showWeekends", !design.showWeekends, true, true);
-  quickToggleWeekendsBtn.textContent = design.showWeekends ? "Hide Weekends" : "Show Weekends";
-});
-
-custShowFreeTime.addEventListener("change", (e) => {
-  updateDesignProp("showFreeTime", e.target.checked, true, true);
-});
-
-// Header Metadata Inputs (Live sync)
-[
-  [custInstName, "institution"],
-  [custSchedTitle, "title"],
-  [custStudentName, "studentName"],
-  [custCourseSection, "courseSection"],
-  [custSemester, "semester"]
-].forEach(([el, field]) => {
-  el.addEventListener("input", (e) => {
-    if (!scheduleData) return;
-    scheduleData[field] = e.target.value;
-    saveSchedule();
-    renderHeaderContent();
-  });
-});
-
-// School Logo Upload (resized for localStorage efficiency)
-logoUploadInput.addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (!file || !file.type.startsWith("image/")) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    const img = new Image();
-    img.onload = () => {
-      const c = document.createElement("canvas");
-      const maxDim = 180;
-      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-      c.width = Math.round(img.width * scale);
-      c.height = Math.round(img.height * scale);
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      design.logoDataUrl = c.toDataURL("image/png");
-      saveDesign();
-      syncCustomizeControls();
-      applyDesignToCanvas();
-      pushHistory();
-      showToast("School logo uploaded.", "success");
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-  logoUploadInput.value = "";
-});
-
-removeLogoBtn.addEventListener("click", () => {
-  design.logoDataUrl = "";
-  saveDesign();
-  syncCustomizeControls();
-  applyDesignToCanvas();
-  pushHistory();
-  showToast("School logo removed.", "info");
-});
-
-// Saved Designs: Save, Load, Duplicate, Delete, Reset
-function renderSavedDesignsList() {
-  savedDesignsList.innerHTML = "";
-  if (!savedDesigns.length) {
-    savedDesignsList.innerHTML = `<p class="muted" style="font-size:0.78rem;">No saved custom designs yet.</p>`;
-    return;
-  }
-  savedDesigns.forEach((item, idx) => {
-    const row = document.createElement("div");
-    row.className = "saved-design-item";
-    row.innerHTML = `
-      <span><strong>${escapeHtml(item.name)}</strong></span>
-      <div class="saved-design-actions">
-        <button type="button" class="btn btn-ghost btn-sm" data-act="load" data-i="${idx}">Load</button>
-        <button type="button" class="btn btn-ghost btn-sm" data-act="dup" data-i="${idx}" title="Duplicate design">Copy</button>
-        <button type="button" class="btn btn-ghost btn-sm text-danger" data-act="del" data-i="${idx}" title="Delete saved design">✕</button>
-      </div>
-    `;
-    savedDesignsList.appendChild(row);
-  });
-
-  savedDesignsList.querySelectorAll("button").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      const i = Number(e.target.dataset.i);
-      const act = e.target.dataset.act;
-      if (act === "load") {
-        design = { ...DEFAULT_DESIGN, ...savedDesigns[i].design };
-        saveDesign();
-        syncCustomizeControls();
-        applyDesignToCanvas();
-        renderDashboard();
-        pushHistory();
-        showToast(`Loaded "${savedDesigns[i].name}".`, "success");
-      } else if (act === "dup") {
-        const copy = JSON.parse(JSON.stringify(savedDesigns[i]));
-        copy.name = `${copy.name} (Copy)`;
-        savedDesigns.push(copy);
-        localStorage.setItem("schedsnap_saved_designs", JSON.stringify(savedDesigns));
-        renderSavedDesignsList();
-        showToast("Duplicated saved design.", "success");
-      } else if (act === "del") {
-        savedDesigns.splice(i, 1);
-        localStorage.setItem("schedsnap_saved_designs", JSON.stringify(savedDesigns));
-        renderSavedDesignsList();
-        showToast("Removed saved design.", "info");
-      }
-    });
-  });
-}
-
-saveDesignBtn.addEventListener("click", () => {
-  const name = saveDesignNameInput.value.trim() || `Custom Design ${savedDesigns.length + 1}`;
-  savedDesigns.push({ name, design: { ...design } });
-  localStorage.setItem("schedsnap_saved_designs", JSON.stringify(savedDesigns));
-  saveDesignNameInput.value = "";
-  renderSavedDesignsList();
-  showToast(`Saved "${name}".`, "success");
-});
-
-resetDesignBtn.addEventListener("click", () => {
-  openConfirm("Reset Design", "Reset all colors, fonts, spacing, and layout back to default?", () => {
-    design = { ...DEFAULT_DESIGN };
-    saveDesign();
-    syncCustomizeControls();
-    applyDesignToCanvas();
-    renderDashboard();
-    pushHistory();
-    showToast("Design reset to default.", "info");
-  });
-});
-
-/* ==========================================================================
-   UPLOAD, PREVIEW, ROTATION, & CLIENT-SIDE OCR (TESSERACT.JS)
+   PHASE 2: SCAN EXPERIENCE (ROTATE + CROP + ENHANCE + STAGED PROGRESS)
    ========================================================================== */
 function handleFile(file) {
   if (!file) return;
   if (!file.type.startsWith("image/")) {
-    showToast("Please choose a valid JPG, PNG, or WebP image.", "error");
+    showToast("Please upload a JPG, PNG, or WebP image.", "error");
     return;
   }
-  uploadedFileMeta = { name: file.name || "Schedule.jpg", size: file.size || 0 };
+  uploadedFileMeta = { name: file.name || "schedule.jpg", size: file.size || 0 };
   const reader = new FileReader();
   reader.onload = (e) => {
     currentRotation = 0;
+    cropState = { top: 0, bottom: 0, left: 0, right: 0 };
+    [cropTop, cropBottom, cropLeft, cropRight].forEach((s) => (s.value = 0));
     const img = new Image();
     img.onload = () => {
       uploadedImageEl = img;
-      renderUploadPreview();
+      renderPreviewImage();
       dropZone.classList.add("hidden");
-      loadingPanel.classList.add("hidden");
       scanErrorPanel.classList.add("hidden");
+      stagedProgressPanel.classList.add("hidden");
+      scanLaserOverlay.classList.add("hidden");
+      previewFooter.classList.remove("hidden");
       previewPanel.classList.remove("hidden");
       previewFileName.textContent = uploadedFileMeta.name;
       const kb = Math.round(uploadedFileMeta.size / 1024);
-      previewFileMeta.textContent = `${img.width} × ${img.height}px${kb > 0 ? " • " + kb + " KB" : ""}`;
+      previewFileMeta.textContent = `${img.width} × ${img.height}px${kb > 0 ? " · " + kb + " KB" : ""}`;
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-function renderUploadPreview() {
-  if (!uploadedImageEl) return;
-  previewImg.src = getRotatedBase64().dataUrl;
-}
-
-function getRotatedBase64() {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
+function buildProcessedCanvas(applyEnhance) {
+  const rotCanvas = document.createElement("canvas");
+  const rctx = rotCanvas.getContext("2d");
   const rad = (currentRotation * Math.PI) / 180;
   const isRotated = Math.abs(currentRotation) % 180 !== 0;
-  const maxDim = window.innerWidth < 768 ? 1400 : 1800;
-  const scale = Math.min(1, maxDim / Math.max(uploadedImageEl.width, uploadedImageEl.height));
+
+  const scale = Math.min(1, 1600 / Math.max(uploadedImageEl.width, uploadedImageEl.height));
   const w = Math.round(uploadedImageEl.width * scale);
   const h = Math.round(uploadedImageEl.height * scale);
 
-  canvas.width = isRotated ? h : w;
-  canvas.height = isRotated ? w : h;
-  ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate(rad);
-  ctx.drawImage(uploadedImageEl, -w / 2, -h / 2, w, h);
+  rotCanvas.width = isRotated ? h : w;
+  rotCanvas.height = isRotated ? w : h;
+  rctx.translate(rotCanvas.width / 2, rotCanvas.height / 2);
+  rctx.rotate(rad);
+  rctx.drawImage(uploadedImageEl, -w / 2, -h / 2, w, h);
 
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.86);
-  return { dataUrl, base64: dataUrl.split(",")[1] };
+  // Apply crop margins (%)
+  const sx = Math.round(rotCanvas.width * (cropState.left / 100));
+  const sy = Math.round(rotCanvas.height * (cropState.top / 100));
+  const sw = Math.max(50, Math.round(rotCanvas.width * (1 - (cropState.left + cropState.right) / 100)));
+  const sh = Math.max(50, Math.round(rotCanvas.height * (1 - (cropState.top + cropState.bottom) / 100)));
+
+  const out = document.createElement("canvas");
+  out.width = sw;
+  out.height = sh;
+  const ctx = out.getContext("2d");
+  ctx.drawImage(rotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+  // Auto-contrast & mild sharpen when Enhance is on
+  if (applyEnhance) {
+    const imgData = ctx.getImageData(0, 0, sw, sh);
+    const d = imgData.data;
+    const contrast = 1.28;
+    const intercept = 128 * (1 - contrast);
+    for (let i = 0; i < d.length; i += 4) {
+      const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      const boosted = Math.max(0, Math.min(255, gray * contrast + intercept));
+      d[i] = d[i + 1] = d[i + 2] = boosted;
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+  return out;
 }
 
-function resetUploadUI() {
-  uploadedImageEl = null;
-  currentRotation = 0;
-  fileInput.value = "";
-  cameraInput.value = "";
-  replaceFileInput.value = "";
-  previewPanel.classList.add("hidden");
-  loadingPanel.classList.add("hidden");
-  scanErrorPanel.classList.add("hidden");
-  dropZone.classList.remove("hidden");
+function renderPreviewImage() {
+  if (!uploadedImageEl) return;
+  const c = buildProcessedCanvas(enhanceEnabled);
+  previewImg.src = c.toDataURL("image/jpeg", 0.88);
+}
+
+function setScanStage(activeIdx) {
+  stageStepsList.querySelectorAll(".stage-step").forEach((el) => {
+    const idx = Number(el.dataset.stage);
+    el.classList.toggle("done", idx < activeIdx);
+    el.classList.toggle("active", idx === activeIdx);
+  });
 }
 
 fileInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
 cameraInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
 replaceFileInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
+errorReplaceInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
+
 dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("dragover"); });
 dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
 dropZone.addEventListener("drop", (e) => { e.preventDefault(); dropZone.classList.remove("dragover"); handleFile(e.dataTransfer.files[0]); });
-rotateLeftBtn.addEventListener("click", () => { currentRotation = (currentRotation - 90 + 360) % 360; renderUploadPreview(); });
-rotateRightBtn.addEventListener("click", () => { currentRotation = (currentRotation + 90) % 360; renderUploadPreview(); });
-removeImgBtn.addEventListener("click", resetUploadUI);
-retryScanBtn.addEventListener("click", () => {
-  scanErrorPanel.classList.add("hidden");
-  if (uploadedImageEl) previewPanel.classList.remove("hidden");
-  else dropZone.classList.remove("hidden");
+
+rotateLeftBtn.addEventListener("click", () => { currentRotation = (currentRotation - 90 + 360) % 360; renderPreviewImage(); });
+rotateRightBtn.addEventListener("click", () => { currentRotation = (currentRotation + 90) % 360; renderPreviewImage(); });
+
+toggleCropBtn.addEventListener("click", () => {
+  const isOpen = !cropControlsBar.classList.toggle("hidden");
+  toggleCropBtn.classList.toggle("active-pill", isOpen);
+  toggleCropBtn.setAttribute("aria-pressed", String(isOpen));
 });
 
-function getPreprocessedOcrCanvas() {
-  const { dataUrl } = getRotatedBase64();
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const d = imgData.data;
-      const contrast = 1.25;
-      const intercept = 128 * (1 - contrast);
-      for (let i = 0; i < d.length; i += 4) {
-        const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-        const boosted = Math.max(0, Math.min(255, gray * contrast + intercept));
-        d[i] = d[i + 1] = d[i + 2] = boosted;
-      }
-      ctx.putImageData(imgData, 0, 0);
-      resolve(canvas);
-    };
-    img.src = dataUrl;
+[
+  [cropTop, "top"], [cropBottom, "bottom"], [cropLeft, "left"], [cropRight, "right"]
+].forEach(([el, key]) => {
+  el.addEventListener("input", (e) => {
+    cropState[key] = Number(e.target.value);
+    renderPreviewImage();
   });
-}
+});
 
+resetCropBtn.addEventListener("click", () => {
+  cropState = { top: 0, bottom: 0, left: 0, right: 0 };
+  [cropTop, cropBottom, cropLeft, cropRight].forEach((s) => (s.value = 0));
+  renderPreviewImage();
+});
+
+toggleEnhanceBtn.addEventListener("click", () => {
+  enhanceEnabled = !enhanceEnabled;
+  toggleEnhanceBtn.classList.toggle("active-pill", enhanceEnabled);
+  toggleEnhanceBtn.setAttribute("aria-pressed", String(enhanceEnabled));
+  toggleEnhanceBtn.querySelector("span").textContent = enhanceEnabled ? "Enhance: On" : "Enhance: Off";
+  renderPreviewImage();
+});
+
+removeImgBtn.addEventListener("click", () => {
+  uploadedImageEl = null;
+  fileInput.value = "";
+  cameraInput.value = "";
+  previewPanel.classList.add("hidden");
+  scanErrorPanel.classList.add("hidden");
+  dropZone.classList.remove("hidden");
+});
+
+retryScanBtn.addEventListener("click", () => {
+  scanErrorPanel.classList.add("hidden");
+  if (uploadedImageEl) {
+    previewPanel.classList.remove("hidden");
+    previewFooter.classList.remove("hidden");
+  }
+});
+
+/* ==========================================================================
+   OCR PARSING (TESSERACT.JS — CLIENT-SIDE)
+   ========================================================================== */
 function parseDaysToken(token) {
   if (!token) return [];
   const t = token.trim();
@@ -1240,17 +567,16 @@ function to24Hour(hourStr, minStr, ampm) {
 function parseOcrScheduleText(rawText) {
   const lines = rawText.split(/\r?\n/).map((l) => l.replace(/\s+/g, " ").trim()).filter((l) => l.length > 2);
   let institution = "My University";
-  let courseSection = "";
-  let semester = "";
+  let metaParts = [];
 
   for (const line of lines.slice(0, 12)) {
     if (/university|institute|college|academy|school/i.test(line) && institution === "My University") {
       institution = line.replace(/[^a-zA-Z0-9 .,'&-]/g, "").trim();
     }
     const secMatch = line.match(/\b(?:section|sec\.?)[:\s-]*([A-Z0-9-]{2,12})/i);
-    if (secMatch) courseSection = `Section ${secMatch[1]}`;
+    if (secMatch) metaParts.push(`Section ${secMatch[1]}`);
     const termMatch = line.match(/\b((?:1st|2nd|3rd|first|second|summer)\s+sem(?:ester)?|sy\s*\d{4}\s*[-–]\s*\d{4})/i);
-    if (termMatch) semester = termMatch[1];
+    if (termMatch) metaParts.push(termMatch[1]);
   }
 
   const timeRangeRegex = /(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*[-–—to]+\s*(\d{1,2})[:.](\d{2})\s*(AM|PM)?/i;
@@ -1261,28 +587,27 @@ function parseOcrScheduleText(rawText) {
   let lastCode = "";
   let lastTitle = "";
 
-  for (const line of lines) {
+  lines.forEach((line, lineIdx) => {
     const timeMatch = line.match(timeRangeRegex);
-    if (!timeMatch) continue;
+    if (!timeMatch) return;
     const startAp = timeMatch[3] || (timeMatch[6] && parseInt(timeMatch[1], 10) <= parseInt(timeMatch[4], 10) ? timeMatch[6] : null);
     const endAp = timeMatch[6] || timeMatch[3] || null;
     let start = to24Hour(timeMatch[1], timeMatch[2], startAp);
     let end = to24Hour(timeMatch[4], timeMatch[5], endAp);
-    const notes = [];
     let uncertain = false;
 
-    if (!start || !end) { start = "08:00"; end = "09:00"; uncertain = true; notes.push("Verify time"); }
+    if (!start || !end) { start = "08:00"; end = "09:00"; uncertain = true; }
     else if (toMinutes(end) <= toMinutes(start)) {
       const [eh, em] = end.split(":").map(Number);
       if (eh < 12) end = `${String(eh + 12).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
-      if (toMinutes(end) <= toMinutes(start)) { uncertain = true; notes.push("Check end time"); }
+      if (toMinutes(end) <= toMinutes(start)) uncertain = true;
     }
 
     const beforeTime = line.slice(0, timeMatch.index).trim();
     const afterTime = line.slice(timeMatch.index + timeMatch[0].length).trim();
     const dayMatch = beforeTime.match(dayTokenRegex) || afterTime.match(dayTokenRegex);
     let days = dayMatch ? parseDaysToken(dayMatch[0]) : [];
-    if (!days.length) { days = ["Mon"]; uncertain = true; notes.push("Verify days"); }
+    if (!days.length) { days = ["Mon"]; uncertain = true; }
 
     const codeMatch = beforeTime.match(courseCodeRegex);
     let code = codeMatch ? codeMatch[1].trim() : "";
@@ -1295,73 +620,91 @@ function parseOcrScheduleText(rawText) {
       if (courseTitle) lastTitle = courseTitle;
     } else if (lastCode) {
       code = lastCode;
-      courseTitle = lastTitle ? `${lastTitle} (Lab/Session 2)` : "";
+      courseTitle = lastTitle ? `${lastTitle} (Lab)` : "";
       uncertain = true;
-      notes.push("Verify course code");
     } else {
       code = `SUBJ ${extracted.length + 1}`;
       uncertain = true;
-      notes.push("Missing code");
     }
 
     let room = afterTime.replace(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b.*$/i, "").replace(dayTokenRegex, "").replace(/^[-–|:.\s]+|[-–|:.\s]+$/g, "").trim();
     if (room.length > 24) room = room.slice(0, 24).trim();
-    if (!room) { uncertain = true; notes.push("Missing room"); }
+    if (!room) uncertain = true;
 
-    extracted.push({ code, title: courseTitle, days, start, end, room, uncertain, note: notes.join(" • ") });
-  }
+    // Approximate vertical position on the source image (0..85%)
+    const yPct = Math.min(84, Math.max(8, Math.round((lineIdx / Math.max(1, lines.length)) * 80) + 6));
+    extracted.push({ code, title: courseTitle, days, start, end, room, uncertain, yPct });
+  });
 
-  return { institution, title: "Class Schedule", studentName: "", courseSection, semester, classes: extracted };
+  return {
+    institution,
+    title: "Class Schedule",
+    meta: metaParts.length ? [...new Set(metaParts)].join(" · ") : "Scanned Schedule",
+    classes: extracted
+  };
 }
 
 scanBtn.addEventListener("click", async () => {
   if (!uploadedImageEl) return;
   if (typeof window.Tesseract === "undefined") {
-    scanErrorMessage.textContent = "OCR engine failed to load. Please refresh and try again.";
+    scanErrorMessage.textContent = "OCR engine could not load. Please check your connection and try again.";
     scanErrorPanel.classList.remove("hidden");
     return;
   }
 
-  previewPanel.classList.add("hidden");
   scanErrorPanel.classList.add("hidden");
-  loadingPanel.classList.remove("hidden");
-  loadingTitle.textContent = "Preparing OCR engine…";
+  previewFooter.classList.add("hidden");
+  scanLaserOverlay.classList.remove("hidden");
+  stagedProgressPanel.classList.remove("hidden");
+  setScanStage(0);
 
   try {
-    const canvas = await getPreprocessedOcrCanvas();
-    const result = await window.Tesseract.recognize(canvas, "eng", {
+    const cleanCanvas = buildProcessedCanvas(enhanceEnabled);
+    lastScannedDataUrl = buildProcessedCanvas(false).toDataURL("image/jpeg", 0.85);
+
+    const result = await window.Tesseract.recognize(cleanCanvas, "eng", {
       logger: (m) => {
         if (m.status === "recognizing text") {
-          loadingTitle.textContent = `Reading schedule… ${Math.round((m.progress || 0) * 100)}%`;
+          const p = m.progress || 0;
+          if (p < 0.35) setScanStage(0);
+          else if (p < 0.7) setScanStage(1);
+          else setScanStage(2);
         }
       }
     });
+
+    setScanStage(3);
+    await new Promise((r) => setTimeout(r, 260));
     const parsed = parseOcrScheduleText(result?.data?.text || "");
-    loadingPanel.classList.add("hidden");
-    previewPanel.classList.remove("hidden");
+
+    scanLaserOverlay.classList.add("hidden");
+    stagedProgressPanel.classList.add("hidden");
+    previewFooter.classList.remove("hidden");
 
     if (!parsed.classes.length) {
-      parsed.classes.push({ code: "", title: "", days: ["Mon"], start: "08:00", end: "09:30", room: "", uncertain: true, note: "No rows auto-detected — enter manually or try a clearer photo" });
-      showToast("Couldn't auto-detect times. Edit rows below or try a sharper photo.", "warning");
-    } else {
-      showToast(`Detected ${parsed.classes.length} classes. Review before generating.`, "success");
+      scanErrorMessage.textContent = "We didn't spot any class time ranges in this photo.";
+      scanErrorPanel.classList.remove("hidden");
+      return;
     }
-    openReviewStep(normalizeSchedule(parsed));
+
+    draftSchedule = normalizeSchedule(parsed);
+    navigateTo("review");
   } catch (err) {
-    loadingPanel.classList.add("hidden");
-    scanErrorMessage.textContent = err.message || "Unable to scan image. Try again.";
+    scanLaserOverlay.classList.add("hidden");
+    stagedProgressPanel.classList.add("hidden");
+    previewFooter.classList.remove("hidden");
+    scanErrorMessage.textContent = err.message || "Unable to read the image. Try a clearer photo.";
     scanErrorPanel.classList.remove("hidden");
   }
 });
 
-// Sample Schedule & Manual Start
-function loadSampleSchedule(showMsg = true) {
+// Sample & Manual Start
+function loadSampleSchedule() {
+  lastScannedDataUrl = "";
   scheduleData = normalizeSchedule({
     institution: "Sample University",
-    title: "Class Schedule",
-    studentName: "Alex Rivera",
-    courseSection: "BS Computer Science • Section A",
-    semester: "1st Semester • SY 2026–2027",
+    title: "BS Computer Science — 1st Semester",
+    meta: "Section A · SY 2026–2027",
     classes: [
       { code: "CS 101", title: "Introduction to Computing", days: ["Mon", "Wed", "Fri"], start: "09:00", end: "10:00", room: "Room 204" },
       { code: "MATH 102", title: "Calculus & Analytic Geometry", days: ["Tue", "Thu"], start: "09:30", end: "11:00", room: "Room 108" },
@@ -1372,40 +715,36 @@ function loadSampleSchedule(showMsg = true) {
     ]
   });
   saveSchedule();
-  pushHistory();
-  if (showMsg) showToast("Sample schedule loaded.", "success");
+  navigateTo("dashboard");
+  showToast("Sample schedule loaded.", "success");
 }
 
-sampleBtn.addEventListener("click", () => {
-  loadSampleSchedule(true);
-  openWorkspace(false);
-});
-
-manualStartBtn.addEventListener("click", () => {
-  openReviewStep(normalizeSchedule({
+sampleBtn.addEventListener("click", loadSampleSchedule);
+const startManual = () => {
+  lastScannedDataUrl = "";
+  draftSchedule = normalizeSchedule({
     institution: "My University",
     title: "Class Schedule",
-    studentName: "",
-    courseSection: "",
-    semester: "",
-    classes: [{ code: "", title: "", days: ["Mon"], start: "09:00", end: "10:30", room: "" }]
-  }));
-});
+    meta: "Section · Semester",
+    classes: [{ code: "", title: "", days: ["Mon"], start: "09:00", end: "10:30", room: "", uncertain: false }]
+  });
+  navigateTo("review");
+};
+manualStartBtn.addEventListener("click", startManual);
+errorManualBtn.addEventListener("click", startManual);
 
 /* ==========================================================================
-   NORMALIZATION & TIME UTILITIES
+   DATA NORMALIZATION & UTILITIES
    ========================================================================== */
 function normalizeSchedule(data) {
-  const pal = COLOR_PALETTES.aesthetic.colors;
   const colorMap = {};
   let idx = 0;
-
   const classes = (data.classes || []).map((cls) => {
     const code = (cls.code || "").trim();
     let color = cls.color;
     if (!color) {
       const key = code.toUpperCase() || `ITEM_${idx}`;
-      if (!colorMap[key]) { colorMap[key] = pal[idx % pal.length]; idx++; }
+      if (!colorMap[key]) { colorMap[key] = SUBJECT_PALETTE[idx % SUBJECT_PALETTE.length]; idx++; }
       color = colorMap[key];
     }
     return {
@@ -1417,41 +756,28 @@ function normalizeSchedule(data) {
       room: (cls.room || "").trim(),
       color,
       uncertain: Boolean(cls.uncertain),
-      note: (cls.note || "").trim()
+      yPct: typeof cls.yPct === "number" ? cls.yPct : null
     };
   });
-
-  // Backwards compatibility with older `meta` field
-  let studentName = (data.studentName || "").trim();
-  let courseSection = (data.courseSection || "").trim();
-  let semester = (data.semester || "").trim();
-  if (!studentName && !courseSection && data.meta) {
-    courseSection = String(data.meta).trim();
-  }
-
   return {
     institution: (data.institution || "Institution Name").trim(),
     title: (data.title || "Class Schedule").trim(),
-    studentName,
-    courseSection,
-    semester,
+    meta: (data.meta || "").trim(),
     classes
   };
 }
 
 function isValidHHMM(str) { return typeof str === "string" && /^\d{2}:\d{2}$/.test(str); }
 function toMinutes(hhmm) { if (!isValidHHMM(hhmm)) return 0; const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; }
-function formatTime(hhmm) {
+function format12h(hhmm) {
   if (!isValidHHMM(hhmm)) return "--:--";
-  if (design.timeFormat === "24") return hhmm;
   let [h, m] = hhmm.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
+  const ap = h >= 12 ? "PM" : "AM";
   h = h % 12 || 12;
-  return `${h}:${String(m).padStart(2, "0")} ${ampm}`;
+  return `${h}:${String(m).padStart(2, "0")} ${ap}`;
 }
 function formatDuration(mins) {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
+  const h = Math.floor(mins / 60), m = mins % 60;
   if (h > 0 && m > 0) return `${h}h ${m}m`;
   if (h > 0) return `${h}h`;
   return `${m}m`;
@@ -1464,46 +790,54 @@ function saveSchedule() {
 }
 
 /* ==========================================================================
-   SECTION 2: EDIT CLASSES / REVIEW INTERFACE
+   STEP 2: REVIEW SCREEN (SPLIT VIEW + FIELD CONFIDENCE + ONE-TAP CONFIRM)
    ========================================================================== */
-function getRowIssues(cls) {
-  const issues = [];
-  if (cls.uncertain) issues.push(cls.note || "Verify OCR text");
-  if (!cls.code) issues.push("Missing code");
-  if (!cls.days.length) issues.push("Select day");
-  if (toMinutes(cls.end) <= toMinutes(cls.start)) issues.push("Invalid time range");
-  if (!cls.room) issues.push("Missing room");
-  return issues;
-}
-
 function openReviewStep(data) {
   draftSchedule = JSON.parse(JSON.stringify(data));
   revInstitution.value = draftSchedule.institution || "";
   revTitle.value = draftSchedule.title || "";
-  revStudent.value = draftSchedule.studentName || "";
-  revSection.value = draftSchedule.courseSection || "";
-  revSemester.value = draftSchedule.semester || "";
-  renderReviewRows();
-  uploadView.classList.add("hidden");
-  workspaceView.classList.add("hidden");
-  if (designBoardView) designBoardView.classList.add("hidden");
+  revMeta.value = draftSchedule.meta || "";
+
+  if (lastScannedDataUrl) {
+    reviewSourceImg.src = lastScannedDataUrl;
+    reviewSourceImg.classList.remove("hidden");
+    reviewImgEmpty.classList.add("hidden");
+  } else {
+    reviewSourceImg.classList.add("hidden");
+    reviewImgEmpty.classList.remove("hidden");
+  }
+  reviewHighlightBand.classList.add("hidden");
+
   reviewView.classList.remove("hidden");
-  currentPage = "review";
-  updateNavActiveState();
+  renderReviewRows();
 }
+
+// Mobile Review Tabs: Image | Results
+reviewMobileTabs.addEventListener("click", (e) => {
+  const btn = e.target.closest(".rev-mob-tab");
+  if (!btn) return;
+  const tab = btn.dataset.revtab;
+  reviewMobileTabs.querySelectorAll(".rev-mob-tab").forEach((b) => b.classList.toggle("active", b === btn));
+  reviewImagePane.classList.toggle("mob-visible", tab === "image");
+  reviewResultsPane.classList.toggle("mob-hidden", tab === "image");
+});
 
 function renderReviewRows() {
   reviewRowsContainer.innerHTML = "";
-  reviewCount.textContent = draftSchedule.classes.length;
-  let flagged = 0;
+  const classes = draftSchedule.classes;
+  const { conflicts } = detectConflicts(classes);
+  let needReviewCount = 0;
 
-  draftSchedule.classes.forEach((cls, idx) => {
-    const issues = getRowIssues(cls);
-    const hasIssues = issues.length > 0;
-    if (hasIssues) flagged++;
+  classes.forEach((cls, idx) => {
+    const codeOk = Boolean(cls.code);
+    const roomOk = Boolean(cls.room);
+    const timeOk = toMinutes(cls.end) > toMinutes(cls.start);
+    const daysOk = cls.days.length > 0;
+    const isUncertain = cls.uncertain || !codeOk || !roomOk || !timeOk || !daysOk;
+    if (isUncertain) needReviewCount++;
 
     const card = document.createElement("div");
-    card.className = `review-row-card ${hasIssues ? "uncertain" : ""}`;
+    card.className = `review-row-card ${isUncertain ? "uncertain" : ""}`;
     const dayPillsHtml = DAYS_ALL.map((d) => `
       <label class="day-pill">
         <input type="checkbox" data-idx="${idx}" data-day="${d}" ${cls.days.includes(d) ? "checked" : ""} />
@@ -1513,30 +847,59 @@ function renderReviewRows() {
 
     card.innerHTML = `
       <div class="review-row-top">
-        <span class="review-badge ${hasIssues ? "warn" : "ok"}">${hasIssues ? "Review: " + escapeHtml(issues.join(" • ")) : "Ready"}</span>
-        <button type="button" class="btn btn-ghost btn-sm text-danger rev-del-btn" data-idx="${idx}">Remove</button>
+        <span class="conf-badge ${isUncertain ? "check" : "ok"}">${isUncertain ? "Check entry" : "OK"}</span>
+        <div class="review-row-actions">
+          ${isUncertain ? `<button type="button" class="btn btn-secondary btn-sm rev-ok-btn" data-idx="${idx}">Looks good</button>` : ""}
+          <button type="button" class="btn btn-ghost btn-sm text-danger rev-del-btn" data-idx="${idx}">Remove</button>
+        </div>
       </div>
       <div class="review-fields-grid">
-        <div class="form-field" style="margin:0;"><label>Course Code</label><input type="text" class="rev-input" data-idx="${idx}" data-field="code" value="${escapeHtml(cls.code)}" placeholder="CS 101" /></div>
-        <div class="form-field" style="margin:0;"><label>Course Title</label><input type="text" class="rev-input" data-idx="${idx}" data-field="title" value="${escapeHtml(cls.title)}" placeholder="Title" /></div>
-        <div class="form-field" style="margin:0;"><label>Room</label><input type="text" class="rev-input" data-idx="${idx}" data-field="room" value="${escapeHtml(cls.room)}" placeholder="Room" /></div>
-        <div class="form-field" style="margin:0;"><label>Start</label><input type="time" class="rev-input" data-idx="${idx}" data-field="start" value="${escapeHtml(cls.start)}" /></div>
-        <div class="form-field" style="margin:0;"><label>End</label><input type="time" class="rev-input" data-idx="${idx}" data-field="end" value="${escapeHtml(cls.end)}" /></div>
+        <div class="form-field" style="margin:0;">
+          <label>Code <span class="conf-badge ${codeOk ? "ok" : "check"}">${codeOk ? "OK" : "Check"}</span></label>
+          <input type="text" class="rev-input" data-idx="${idx}" data-field="code" value="${escapeHtml(cls.code)}" placeholder="CS 101" />
+        </div>
+        <div class="form-field" style="margin:0;">
+          <label>Course Title</label>
+          <input type="text" class="rev-input" data-idx="${idx}" data-field="title" value="${escapeHtml(cls.title)}" placeholder="Course name" />
+        </div>
+        <div class="form-field" style="margin:0;">
+          <label>Room <span class="conf-badge ${roomOk ? "ok" : "check"}">${roomOk ? "OK" : "Check"}</span></label>
+          <input type="text" class="rev-input" data-idx="${idx}" data-field="room" value="${escapeHtml(cls.room)}" placeholder="Room" />
+        </div>
+        <div class="form-field" style="margin:0;">
+          <label>Start <span class="conf-badge ${timeOk ? "ok" : "check"}">${timeOk ? "OK" : "Check"}</span></label>
+          <input type="time" class="rev-input" data-idx="${idx}" data-field="start" value="${escapeHtml(cls.start)}" />
+        </div>
+        <div class="form-field" style="margin:0;">
+          <label>End</label>
+          <input type="time" class="rev-input" data-idx="${idx}" data-field="end" value="${escapeHtml(cls.end)}" />
+        </div>
       </div>
       <div class="day-pill-selector">${dayPillsHtml}</div>
     `;
+
+    // Clicking a row highlights where it came from on the source image
+    card.addEventListener("click", () => {
+      reviewRowsContainer.querySelectorAll(".review-row-card").forEach((c) => c.classList.remove("selected-row"));
+      card.classList.add("selected-row");
+      if (lastScannedDataUrl) {
+        const y = cls.yPct !== null ? cls.yPct : Math.min(82, 12 + idx * 10);
+        reviewHighlightBand.style.top = `${y}%`;
+        reviewHighlightBand.classList.remove("hidden");
+      }
+    });
+
     reviewRowsContainer.appendChild(card);
   });
 
-  reviewSummaryBanner.classList.toggle("hidden", flagged === 0);
-  if (flagged > 0) reviewSummaryTitle.textContent = `${flagged} ${flagged === 1 ? "entry needs" : "entries need"} your attention`;
+  reviewSummaryStats.textContent = `Found ${classes.length} course${classes.length !== 1 ? "s" : ""} · ${conflicts.length} conflict${conflicts.length !== 1 ? "s" : ""} · ${needReviewCount} need review`;
 
+  // Bind inline edits, one-tap "Looks good", day chips, & remove
   reviewRowsContainer.querySelectorAll(".rev-input").forEach((inp) => {
     inp.addEventListener("change", (e) => {
       const i = Number(e.target.dataset.idx);
       draftSchedule.classes[i][e.target.dataset.field] = e.target.value.trim();
       draftSchedule.classes[i].uncertain = false;
-      draftSchedule.classes[i].note = "";
       renderReviewRows();
     });
   });
@@ -1550,8 +913,18 @@ function renderReviewRows() {
       renderReviewRows();
     });
   });
+  reviewRowsContainer.querySelectorAll(".rev-ok-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const i = Number(e.target.dataset.idx);
+      draftSchedule.classes[i].uncertain = false;
+      renderReviewRows();
+      showToast("Marked as confirmed.", "success");
+    });
+  });
   reviewRowsContainer.querySelectorAll(".rev-del-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
+      e.stopPropagation();
       draftSchedule.classes.splice(Number(e.target.dataset.idx), 1);
       renderReviewRows();
     });
@@ -1559,42 +932,39 @@ function renderReviewRows() {
 }
 
 reviewAddRowBtn.addEventListener("click", () => {
-  draftSchedule.classes.push({ code: "", title: "", room: "", start: "09:00", end: "10:30", days: ["Mon"], uncertain: false, note: "" });
+  draftSchedule.classes.push({ code: "", title: "", room: "", start: "09:00", end: "10:30", days: ["Mon"], uncertain: false });
   renderReviewRows();
 });
-reviewBackBtn.addEventListener("click", () => navigateTo("upload"));
 
-function commitReview(openCustomizeAfter) {
+reviewBackBtn.addEventListener("click", () => navigateTo("upload"));
+reviewBackBtnMobile.addEventListener("click", () => navigateTo("upload"));
+
+function confirmAndGenerateTimetable() {
   draftSchedule.institution = revInstitution.value.trim() || "Institution Name";
   draftSchedule.title = revTitle.value.trim() || "Class Schedule";
-  draftSchedule.studentName = revStudent.value.trim();
-  draftSchedule.courseSection = revSection.value.trim();
-  draftSchedule.semester = revSemester.value.trim();
+  draftSchedule.meta = revMeta.value.trim();
 
-  if (!draftSchedule.classes.length) {
-    showToast("Add at least one class first.", "error");
-    return;
-  }
+  if (!draftSchedule.classes.length) return showToast("Add at least one class first.", "error");
   for (let i = 0; i < draftSchedule.classes.length; i++) {
     const c = draftSchedule.classes[i];
-    if (!c.code) return showToast(`Row ${i + 1}: Enter a course code.`, "error");
-    if (!c.days.length) return showToast(`Row ${i + 1} (${c.code}): Select a day.`, "error");
+    if (!c.code) return showToast(`Row ${i + 1}: Please enter a course code.`, "error");
+    if (!c.days.length) return showToast(`Row ${i + 1} (${c.code}): Select at least one day.`, "error");
     if (toMinutes(c.end) <= toMinutes(c.start)) return showToast(`Row ${i + 1} (${c.code}): End time must be after start time.`, "error");
     c.uncertain = false;
-    c.note = "";
   }
+
   scheduleData = normalizeSchedule(draftSchedule);
   saveSchedule();
-  pushHistory();
-  openWorkspace(openCustomizeAfter);
-  showToast("Schedule saved!", "success");
+  hasAnimatedStats = false;
+  navigateTo("dashboard");
+  showSuccessCheck("Timetable ready!");
 }
 
-confirmScheduleBtn.addEventListener("click", () => commitReview(false));
-confirmToCustomizeBtn.addEventListener("click", () => commitReview(true));
+confirmScheduleBtnTop.addEventListener("click", confirmAndGenerateTimetable);
+confirmScheduleBtn.addEventListener("click", confirmAndGenerateTimetable);
 
 /* ==========================================================================
-   CONFLICTS, FREE TIME, LIVE STATUS, STATS
+   CONFLICT DETECTION, FREE TIME, LIVE STATUS, & ANIMATED STATS
    ========================================================================== */
 function detectConflicts(classes) {
   const conflicts = [];
@@ -1621,8 +991,7 @@ function getFreePeriodsForDay(dayClasses) {
   const gaps = [];
   let maxEnd = toMinutes(sorted[0].end);
   for (let i = 1; i < sorted.length; i++) {
-    const s = toMinutes(sorted[i].start);
-    const e = toMinutes(sorted[i].end);
+    const s = toMinutes(sorted[i].start), e = toMinutes(sorted[i].end);
     if (s - maxEnd >= 30) gaps.push({ startMin: maxEnd, endMin: s, duration: s - maxEnd });
     if (e > maxEnd) maxEnd = e;
   }
@@ -1633,7 +1002,7 @@ function updateLiveStatus() {
   const now = new Date();
   const todayKey = JS_DAY_TO_KEY[now.getDay()];
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  liveClock.textContent = `${DAY_NAMES_FULL[todayKey]} • ${now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  liveClock.textContent = `${DAY_NAMES_FULL[todayKey]} · ${now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 
   if (!scheduleData || !scheduleData.classes.length) return;
   const classes = scheduleData.classes;
@@ -1643,15 +1012,14 @@ function updateLiveStatus() {
   if (ongoing) {
     currentStatusBadge.classList.add("live-now");
     currentStatusLabel.textContent = "Ongoing Now";
-    currentClassBody.innerHTML = `<strong>${escapeHtml(ongoing.code)}${ongoing.title ? " — " + escapeHtml(ongoing.title) : ""}</strong><span>${formatTime(ongoing.start)} – ${formatTime(ongoing.end)}${ongoing.room ? " • " + escapeHtml(ongoing.room) : ""} (${formatDuration(toMinutes(ongoing.end) - nowMin)} left)</span>`;
+    currentClassBody.innerHTML = `<strong>${escapeHtml(ongoing.code)}${ongoing.title ? " — " + escapeHtml(ongoing.title) : ""}</strong><span>${format12h(ongoing.start)} – ${format12h(ongoing.end)}${ongoing.room ? " · " + escapeHtml(ongoing.room) : ""} (${formatDuration(toMinutes(ongoing.end) - nowMin)} left)</span>`;
   } else {
     currentStatusBadge.classList.remove("live-now");
-    currentStatusLabel.textContent = "Free Right Now";
-    currentClassBody.innerHTML = `<strong>No ongoing class</strong><span>${todayClasses.length ? `${todayClasses.length} class${todayClasses.length > 1 ? "es" : ""} scheduled today.` : "You have a free day today."}</span>`;
+    currentStatusLabel.textContent = "No class right now";
+    currentClassBody.innerHTML = `<strong>You're free right now</strong><span>${todayClasses.length ? `${todayClasses.length} class${todayClasses.length > 1 ? "es" : ""} on your schedule today.` : "Enjoy your free day — or tap + Add class to plan study time."}</span>`;
   }
 
-  let nextClass = null;
-  let dayOffset = 0;
+  let nextClass = null, dayOffset = 0;
   for (let offset = 0; offset < 7; offset++) {
     const dKey = JS_DAY_TO_KEY[(now.getDay() + offset) % 7];
     const cands = classes.filter((c) => c.days.includes(dKey)).filter((c) => offset > 0 || toMinutes(c.start) > nowMin).sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
@@ -1660,10 +1028,33 @@ function updateLiveStatus() {
 
   if (nextClass) {
     upcomingCountdown.textContent = dayOffset === 0 ? `In ${formatDuration(toMinutes(nextClass.start) - nowMin)}`
-      : dayOffset === 1 ? `Tomorrow • ${formatTime(nextClass.start)}`
-      : `${DAY_NAMES_FULL[nextClass.dayKey]} • ${formatTime(nextClass.start)}`;
-    upcomingClassBody.innerHTML = `<strong>${escapeHtml(nextClass.code)}${nextClass.title ? " — " + escapeHtml(nextClass.title) : ""}</strong><span>${formatTime(nextClass.start)} – ${formatTime(nextClass.end)}${nextClass.room ? " • " + escapeHtml(nextClass.room) : ""}</span>`;
+      : dayOffset === 1 ? `Tomorrow · ${format12h(nextClass.start)}`
+      : `${DAY_NAMES_FULL[nextClass.dayKey]} · ${format12h(nextClass.start)}`;
+    upcomingClassBody.innerHTML = `<strong>${escapeHtml(nextClass.code)}${nextClass.title ? " — " + escapeHtml(nextClass.title) : ""}</strong><span>${format12h(nextClass.start)} – ${format12h(nextClass.end)}${nextClass.room ? " · " + escapeHtml(nextClass.room) : ""}</span>`;
+  } else {
+    upcomingCountdown.textContent = "—";
+    upcomingClassBody.innerHTML = `<strong>No upcoming classes</strong><span>Add classes to see your next session here.</span>`;
   }
+}
+
+function animateCount(el, target, suffix = "") {
+  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (prefersReduced || hasAnimatedStats) {
+    el.textContent = `${target}${suffix}`;
+    return;
+  }
+  const duration = 360;
+  const start = performance.now();
+  const isFloat = String(target).includes(".");
+  const endNum = parseFloat(target) || 0;
+
+  function tick(now) {
+    const progress = Math.min(1, (now - start) / duration);
+    const val = endNum * (1 - Math.pow(1 - progress, 3));
+    el.textContent = `${isFloat ? val.toFixed(1).replace(/\.0$/, "") : Math.round(val)}${suffix}`;
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 
 function renderStats(classes) {
@@ -1680,27 +1071,21 @@ function renderStats(classes) {
     if (dayMin[d] > maxM) { maxM = dayMin[d]; busiest = DAY_NAMES_FULL[d]; }
     if (dayMin[d] === 0) freeDays.push(d);
   });
-  statSubjects.textContent = unique.size;
-  statSessions.textContent = sessions;
-  statHours.textContent = `${(totalMin / 60).toFixed(1).replace(/\.0$/, "")}h`;
+
+  const hoursVal = (totalMin / 60).toFixed(1).replace(/\.0$/, "");
+  animateCount(statSubjects, unique.size);
+  animateCount(statSessions, sessions);
+  animateCount(statHours, hoursVal, "h");
   statBusiest.textContent = busiest;
   statBusiestSub.textContent = maxM > 0 ? formatDuration(maxM) : "No classes";
-  statFreeDays.textContent = freeDays.length;
+  animateCount(statFreeDays, freeDays.length);
   statFreeDaysSub.textContent = freeDays.length ? freeDays.join(", ") : "Every day";
+  hasAnimatedStats = true;
 }
 
 /* ==========================================================================
-   TIMETABLE RENDERING (GRID, COMPACT, CARDS, MINIMAL, MOBILE DAY VIEW)
+   PHASE 3: READABLE TIMETABLE (DESKTOP GRID, MOBILE SWIPE RAIL, TIMELINE CARDS)
    ========================================================================== */
-function renderHeaderContent() {
-  if (!scheduleData) return;
-  headerInstitution.textContent = scheduleData.institution || "Institution Name";
-  headerTitle.textContent = scheduleData.title || "Class Schedule";
-  headerStudent.textContent = scheduleData.studentName || "";
-  const subParts = [scheduleData.courseSection, scheduleData.semester].filter(Boolean);
-  headerSubMeta.textContent = subParts.join(" • ");
-}
-
 function getFilteredClasses() {
   if (!scheduleData) return [];
   const q = searchQuery.trim().toLowerCase();
@@ -1713,13 +1098,14 @@ function getFilteredClasses() {
 
 function getVisibleDays() {
   if (activeDayFilter !== "ALL") return [activeDayFilter];
-  return design.showWeekends ? [...DAYS_ALL] : ["Mon", "Tue", "Wed", "Thu", "Fri"];
+  return showWeekends ? [...DAYS_ALL] : ["Mon", "Tue", "Wed", "Thu", "Fri"];
 }
 
 function renderDashboard() {
   if (!scheduleData) return;
-  renderHeaderContent();
-  applyDesignToCanvas();
+  headerInstitution.textContent = scheduleData.institution || "Institution Name";
+  headerTitle.textContent = scheduleData.title || "Class Schedule";
+  headerMeta.textContent = scheduleData.meta || "";
 
   const allClasses = scheduleData.classes || [];
   renderStats(allClasses);
@@ -1737,21 +1123,23 @@ function renderDashboard() {
   const filtered = getFilteredClasses();
   const visibleDays = getVisibleDays();
 
-  gridView.classList.add("hidden");
-  cardsView.classList.add("hidden");
-  singleDayView.classList.add("hidden");
-  singleDayBar.classList.add("hidden");
-
-  if (design.layout === "grid" || design.layout === "compact") {
+  if (activeView === "grid") {
     gridView.classList.remove("hidden");
-    renderWeeklyGrid(filtered, visibleDays, conflictingIndices);
-  } else if (design.layout === "cards" || design.layout === "minimal") {
+    cardsView.classList.add("hidden");
+    const isMobileRail = window.innerWidth < 768 && activeDayFilter === "ALL";
+    mobileDayRailHeader.classList.toggle("hidden", !isMobileRail);
+    if (isMobileRail) {
+      if (!visibleDays.includes(mobileDayKey)) mobileDayKey = visibleDays[0] || "Mon";
+      mobActiveDayLabel.textContent = DAY_NAMES_FULL[mobileDayKey];
+      renderWeeklyGrid(filtered, [mobileDayKey], conflictingIndices, false);
+    } else {
+      renderWeeklyGrid(filtered, visibleDays, conflictingIndices, true);
+    }
+  } else {
+    mobileDayRailHeader.classList.add("hidden");
+    gridView.classList.add("hidden");
     cardsView.classList.remove("hidden");
-    renderDayCards(filtered, visibleDays, conflictingIndices, design.layout === "minimal");
-  } else if (design.layout === "day") {
-    singleDayBar.classList.remove("hidden");
-    singleDayView.classList.remove("hidden");
-    renderSingleDayView(filtered, visibleDays, conflictingIndices);
+    renderTimelineDayCards(filtered, visibleDays, conflictingIndices);
   }
 }
 
@@ -1779,11 +1167,10 @@ function layoutDayBlocks(dayClasses) {
   return items;
 }
 
-function renderWeeklyGrid(classes, days, conflictingIndices) {
+function renderWeeklyGrid(classes, days, conflictingIndices, isDesktopWeek) {
   const now = new Date();
   const todayKey = JS_DAY_TO_KEY[now.getDay()];
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  const pxPerHour = design.layout === "compact" ? Math.max(40, Math.round(design.hourHeight * 0.72)) : design.hourHeight;
 
   let minHour = 7, maxHour = 18;
   classes.forEach((c) => {
@@ -1792,11 +1179,11 @@ function renderWeeklyGrid(classes, days, conflictingIndices) {
   });
   if (maxHour <= minHour) maxHour = minHour + 8;
 
-  const totalHeight = (maxHour - minHour) * pxPerHour;
+  const totalHeight = (maxHour - minHour) * PIXELS_PER_HOUR;
   gridView.innerHTML = "";
   const grid = document.createElement("div");
-  grid.className = "timetable-grid";
-  grid.style.gridTemplateColumns = `68px repeat(${days.length}, minmax(105px, 1fr))`;
+  grid.className = `timetable-grid ${isDesktopWeek && days.length > 1 ? "desktop-week" : ""}`;
+  grid.style.gridTemplateColumns = `72px repeat(${days.length}, minmax(105px, 1fr))`;
 
   grid.innerHTML += `<div class="grid-header-cell">Time</div>`;
   days.forEach((d) => {
@@ -1808,84 +1195,68 @@ function renderWeeklyGrid(classes, days, conflictingIndices) {
   for (let h = minHour; h < maxHour; h++) {
     const slot = document.createElement("div");
     slot.className = "time-slot-label";
-    slot.textContent = formatTime(`${String(h).padStart(2, "0")}:00`);
+    slot.textContent = format12h(`${String(h).padStart(2, "0")}:00`);
     timeCol.appendChild(slot);
   }
   grid.appendChild(timeCol);
 
+  let blockAnimIdx = 0;
   days.forEach((day) => {
     const col = document.createElement("div");
-    col.className = "day-column";
+    col.className = `day-column ${day === todayKey ? "is-today" : ""}`;
     col.style.height = `${totalHeight}px`;
-
-    // Drag-and-drop target to rearrange class to another day
-    col.addEventListener("dragover", (e) => { e.preventDefault(); col.classList.add("drag-target"); });
-    col.addEventListener("dragleave", () => col.classList.remove("drag-target"));
-    col.addEventListener("drop", (e) => {
-      e.preventDefault();
-      col.classList.remove("drag-target");
-      const raw = e.dataTransfer.getData("text/plain");
-      if (!raw) return;
-      const { idx, fromDay } = JSON.parse(raw);
-      if (fromDay === day || !scheduleData.classes[idx]) return;
-      const daysSet = new Set(scheduleData.classes[idx].days);
-      daysSet.delete(fromDay);
-      daysSet.add(day);
-      scheduleData.classes[idx].days = DAYS_ALL.filter((d) => daysSet.has(d));
-      saveSchedule();
-      renderDashboard();
-      showToast(`Moved ${scheduleData.classes[idx].code} from ${fromDay} to ${day}.`, "success");
-    });
 
     if (day === todayKey && nowMin >= minHour * 60 && nowMin <= maxHour * 60) {
       const line = document.createElement("div");
       line.className = "now-line";
-      line.style.top = `${((nowMin - minHour * 60) / 60) * pxPerHour}px`;
+      line.style.top = `${((nowMin - minHour * 60) / 60) * PIXELS_PER_HOUR}px`;
       col.appendChild(line);
     }
 
     const dayClasses = classes.filter((c) => c.days.includes(day));
-    if (design.showFreeTime && dayClasses.length >= 2) {
+    if (showFreeTime && dayClasses.length >= 2) {
       getFreePeriodsForDay(dayClasses).forEach((g) => {
-        const top = ((g.startMin - minHour * 60) / 60) * pxPerHour + 2;
-        const height = (g.duration / 60) * pxPerHour - 4;
+        const top = ((g.startMin - minHour * 60) / 60) * PIXELS_PER_HOUR + 2;
+        const height = (g.duration / 60) * PIXELS_PER_HOUR - 4;
         if (height >= 24) {
           const fb = document.createElement("div");
           fb.className = "free-block";
           fb.style.top = `${top}px`;
           fb.style.height = `${height}px`;
-          fb.textContent = `Free • ${formatDuration(g.duration)}`;
+          fb.textContent = `Free · ${formatDuration(g.duration)}`;
           col.appendChild(fb);
         }
       });
     }
 
     layoutDayBlocks(dayClasses).forEach((cls) => {
-      const gap = design.blockGap;
-      const top = ((cls.s - minHour * 60) / 60) * pxPerHour + gap / 2;
-      const height = Math.max(28, ((cls.e - cls.s) / 60) * pxPerHour - gap);
+      const top = ((cls.s - minHour * 60) / 60) * PIXELS_PER_HOUR + 2;
+      const height = Math.max(32, ((cls.e - cls.s) / 60) * PIXELS_PER_HOUR - 4);
       const isConflict = conflictingIndices.has(cls.idx) && cls.totalCols > 1;
       const isOngoing = day === todayKey && nowMin >= cls.s && nowMin < cls.e;
 
       const block = document.createElement("div");
       block.className = `class-block ${isConflict ? "is-conflict" : ""} ${isOngoing ? "is-ongoing" : ""}`;
-      block.draggable = true;
       block.style.top = `${top}px`;
       block.style.height = `${height}px`;
-      block.style.background = cls.color || "#4f46e5";
+      block.style.background = cls.color || "#4338ca";
+      block.style.animationDelay = `${Math.min(blockAnimIdx * 28, 280)}ms`;
+      blockAnimIdx++;
 
       const wPct = 100 / cls.totalCols;
-      block.style.left = `calc(${cls.col * wPct}% + ${gap / 2}px)`;
-      block.style.width = `calc(${wPct}% - ${gap}px)`;
+      block.style.left = `calc(${cls.col * wPct}% + 3px)`;
+      block.style.width = `calc(${wPct}% - 6px)`;
 
+      // Clear hierarchy: Course code bold -> Room secondary -> Title smaller
       block.innerHTML = `
-        <div class="class-code">${escapeHtml(cls.code)}</div>
-        ${cls.title && design.layout !== "compact" ? `<div class="class-title">${escapeHtml(cls.title)}</div>` : ""}
-        <div class="class-meta">${formatTime(cls.start)}–${formatTime(cls.end)}${cls.room ? " • " + escapeHtml(cls.room) : ""}</div>
+        <div class="class-code-row">
+          <span class="class-code">${escapeHtml(cls.code)}</span>
+          ${isConflict ? `<span class="conflict-pill" title="Time conflict">!</span>` : ""}
+        </div>
+        ${cls.room && height >= 42 ? `<div class="class-room">${escapeHtml(cls.room)}</div>` : ""}
+        ${cls.title && height >= 58 ? `<div class="class-title">${escapeHtml(cls.title)}</div>` : ""}
       `;
-      block.addEventListener("dragstart", (e) => {
-        e.dataTransfer.setData("text/plain", JSON.stringify({ idx: cls.idx, fromDay: day }));
-      });
+      block.title = `${cls.code}${cls.title ? " — " + cls.title : ""}\n${format12h(cls.start)} – ${format12h(cls.end)}${cls.room ? "\nRoom: " + cls.room : ""}\nTap to edit`;
       block.addEventListener("click", () => openClassModal(cls.idx));
       col.appendChild(block);
     });
@@ -1895,143 +1266,157 @@ function renderWeeklyGrid(classes, days, conflictingIndices) {
   gridView.appendChild(grid);
 }
 
-function renderDayCards(classes, days, conflictingIndices, isMinimal) {
+// Clean Timeline Day Cards (Time on Left, Class Card on Right, "Free · 1h 30m" Gaps)
+function renderTimelineDayCards(classes, days, conflictingIndices) {
   const todayKey = JS_DAY_TO_KEY[new Date().getDay()];
   cardsView.innerHTML = "";
+
   days.forEach((day) => {
     const dayClasses = classes.filter((c) => c.days.includes(day)).sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
     const card = document.createElement("div");
-    card.className = `day-card ${isMinimal ? "minimal-mode" : ""}`;
+    card.className = `day-card ${day === todayKey ? "is-today" : ""}`;
     card.innerHTML = `
       <div class="day-card-header">
         <h3>${DAY_NAMES_FULL[day]} ${day === todayKey ? `<span class="today-dot">Today</span>` : ""}</h3>
         <span class="day-card-count">${dayClasses.length ? `${dayClasses.length} class${dayClasses.length > 1 ? "es" : ""}` : "Free"}</span>
       </div>
     `;
+
     if (!dayClasses.length) {
-      card.innerHTML += `<div class="empty-day-box">No classes scheduled</div>`;
+      card.innerHTML += `<div class="empty-day-box">No classes scheduled — Free day</div>`;
     } else {
       dayClasses.forEach((cls, i) => {
-        if (design.showFreeTime && i > 0) {
-          const gapMin = toMinutes(cls.start) - toMinutes(dayClasses[i - 1].end);
-          if (gapMin >= 30) {
+        if (showFreeTime && i > 0) {
+          const gap = toMinutes(cls.start) - toMinutes(dayClasses[i - 1].end);
+          if (gap >= 30) {
             const g = document.createElement("div");
-            g.className = "card-free-gap";
-            g.textContent = `Free • ${formatDuration(gapMin)}`;
+            g.className = "timeline-free-gap";
+            g.textContent = `Free · ${formatDuration(gap)}`;
             card.appendChild(g);
           }
         }
-        const item = document.createElement("div");
-        item.className = `card-class-item ${conflictingIndices.has(cls.idx) ? "is-conflict" : ""}`;
-        item.style.borderLeftColor = cls.color || "#4f46e5";
-        item.innerHTML = `
-          <div class="card-item-code">${escapeHtml(cls.code)}</div>
-          ${cls.title ? `<div class="card-item-title">${escapeHtml(cls.title)}</div>` : ""}
-          <div class="card-item-meta">${formatTime(cls.start)} – ${formatTime(cls.end)}${cls.room ? " • " + escapeHtml(cls.room) : ""}</div>
+        const isConflict = conflictingIndices.has(cls.idx);
+        const row = document.createElement("div");
+        row.className = "timeline-row";
+        row.innerHTML = `
+          <div class="timeline-time">
+            <div>${format12h(cls.start)}</div>
+            <div style="opacity:0.65;font-weight:500;">${format12h(cls.end)}</div>
+          </div>
+          <div class="timeline-card ${isConflict ? "is-conflict" : ""}" style="border-left-color:${cls.color || "#4338ca"};">
+            <div class="timeline-card-code">
+              <span>${escapeHtml(cls.code)}</span>
+              ${isConflict ? `<span class="conflict-pill">!</span>` : ""}
+            </div>
+            ${cls.room ? `<div class="timeline-card-room">${escapeHtml(cls.room)}</div>` : ""}
+            ${cls.title ? `<div class="timeline-card-title">${escapeHtml(cls.title)}</div>` : ""}
+          </div>
         `;
-        item.addEventListener("click", () => openClassModal(cls.idx));
-        card.appendChild(item);
+        row.querySelector(".timeline-card").addEventListener("click", () => openClassModal(cls.idx));
+        card.appendChild(row);
       });
     }
     cardsView.appendChild(card);
   });
 }
 
-function renderSingleDayView(classes, visibleDays, conflictingIndices) {
-  if (!visibleDays.includes(selectedSingleDay)) selectedSingleDay = visibleDays[0] || "Mon";
-  singleDayTabs.innerHTML = "";
-  visibleDays.forEach((d) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = `sday-tab ${d === selectedSingleDay ? "active" : ""}`;
-    btn.textContent = d;
-    btn.addEventListener("click", () => { selectedSingleDay = d; renderDashboard(); });
-    singleDayTabs.appendChild(btn);
-  });
-
-  const dayClasses = classes.filter((c) => c.days.includes(selectedSingleDay)).sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
-  singleDayView.innerHTML = "";
-
-  if (!dayClasses.length) {
-    singleDayView.innerHTML = `<div class="empty-day-box">No classes on ${DAY_NAMES_FULL[selectedSingleDay]} — Free Day!</div>`;
-    return;
-  }
-
-  dayClasses.forEach((cls, i) => {
-    if (design.showFreeTime && i > 0) {
-      const gapMin = toMinutes(cls.start) - toMinutes(dayClasses[i - 1].end);
-      if (gapMin >= 30) {
-        const g = document.createElement("div");
-        g.className = "card-free-gap";
-        g.textContent = `Free break • ${formatDuration(gapMin)}`;
-        singleDayView.appendChild(g);
-      }
-    }
-
-    const card = document.createElement("div");
-    card.className = "expandable-class-card";
-    card.style.borderLeftColor = cls.color || "#4f46e5";
-    card.innerHTML = `
-      <div class="exp-card-top">
-        <div>
-          <div class="card-item-code">${escapeHtml(cls.code)}</div>
-          ${cls.title ? `<div class="card-item-title">${escapeHtml(cls.title)}</div>` : ""}
-          <div class="card-item-meta">${formatTime(cls.start)} – ${formatTime(cls.end)}${cls.room ? " • " + escapeHtml(cls.room) : ""}</div>
-        </div>
-        <span class="muted" style="font-size:0.85rem;">▾</span>
-      </div>
-      <div class="exp-card-details hidden">
-        <span>Days: ${cls.days.join(", ")} • Duration: ${formatDuration(toMinutes(cls.end) - toMinutes(cls.start))}</span>
-        <button type="button" class="btn btn-secondary btn-sm exp-edit-btn">Edit Class</button>
-      </div>
-    `;
-    const topEl = card.querySelector(".exp-card-top");
-    const detailsEl = card.querySelector(".exp-card-details");
-    topEl.addEventListener("click", () => detailsEl.classList.toggle("hidden"));
-    card.querySelector(".exp-edit-btn").addEventListener("click", (e) => {
-      e.stopPropagation();
-      openClassModal(cls.idx);
-    });
-    singleDayView.appendChild(card);
-  });
+// Mobile Swipe Left/Right on Vertical Time Rail
+function setupMobileSwipeOnGrid() {
+  let touchStartX = 0;
+  gridView.addEventListener("touchstart", (e) => { touchStartX = e.changedTouches[0].clientX; }, { passive: true });
+  gridView.addEventListener("touchend", (e) => {
+    if (window.innerWidth >= 768 || activeView !== "grid" || activeDayFilter !== "ALL") return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) < 50) return;
+    const days = getVisibleDays();
+    const idx = days.indexOf(mobileDayKey);
+    mobileDayKey = dx < 0 ? days[(idx + 1) % days.length] : days[(idx - 1 + days.length) % days.length];
+    renderDashboard();
+  }, { passive: true });
 }
 
-prevDayBtn.addEventListener("click", () => {
+mobPrevDayBtn.addEventListener("click", () => {
   const days = getVisibleDays();
-  const i = days.indexOf(selectedSingleDay);
-  selectedSingleDay = days[(i - 1 + days.length) % days.length];
+  mobileDayKey = days[(days.indexOf(mobileDayKey) - 1 + days.length) % days.length];
   renderDashboard();
 });
-nextDayBtn.addEventListener("click", () => {
+mobNextDayBtn.addEventListener("click", () => {
   const days = getVisibleDays();
-  const i = days.indexOf(selectedSingleDay);
-  selectedSingleDay = days[(i + 1) % days.length];
+  mobileDayKey = days[(days.indexOf(mobileDayKey) + 1) % days.length];
+  renderDashboard();
+});
+window.addEventListener("resize", () => { if (currentStep === "dashboard") renderDashboard(); });
+
+// Editable header persistence
+[headerInstitution, headerTitle, headerMeta].forEach((el) => {
+  el.addEventListener("blur", () => {
+    if (!scheduleData) return;
+    scheduleData.institution = headerInstitution.textContent.trim();
+    scheduleData.title = headerTitle.textContent.trim();
+    scheduleData.meta = headerMeta.textContent.trim();
+    saveSchedule();
+  });
+});
+
+/* ==========================================================================
+   TOOLBAR CONTROLS (SEGMENTED VIEW, TODAY JUMP, VIEW OPTIONS POPOVER)
+   ========================================================================== */
+viewGridBtn.addEventListener("click", () => {
+  activeView = "grid";
+  viewGridBtn.classList.add("active");
+  viewCardsBtn.classList.remove("active");
+  renderDashboard();
+});
+viewCardsBtn.addEventListener("click", () => {
+  activeView = "cards";
+  viewCardsBtn.classList.add("active");
+  viewGridBtn.classList.remove("active");
   renderDashboard();
 });
 
-// Inline header contenteditable sync
-headerInstitution.addEventListener("blur", () => {
-  if (!scheduleData) return;
-  scheduleData.institution = headerInstitution.textContent.trim();
-  custInstName.value = scheduleData.institution;
-  saveSchedule();
-});
-headerTitle.addEventListener("blur", () => {
-  if (!scheduleData) return;
-  scheduleData.title = headerTitle.textContent.trim();
-  custSchedTitle.value = scheduleData.title;
-  saveSchedule();
-});
-
-// Search & Day Filter
 searchInput.addEventListener("input", (e) => { searchQuery = e.target.value; renderDashboard(); });
+
+themeSelect.addEventListener("change", (e) => {
+  captureArea.setAttribute("data-theme", e.target.value);
+  localStorage.setItem("schedsnap_theme", e.target.value);
+});
+
+viewOptionsBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const isOpen = !viewOptionsPopover.classList.toggle("hidden");
+  viewOptionsBtn.setAttribute("aria-expanded", String(isOpen));
+});
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".popover-anchor")) {
+    viewOptionsPopover.classList.add("hidden");
+    viewOptionsBtn.setAttribute("aria-expanded", "false");
+  }
+});
+
+toggleFreeTime.addEventListener("change", (e) => { showFreeTime = e.target.checked; renderDashboard(); });
+toggleWeekends.addEventListener("change", (e) => { showWeekends = e.target.checked; renderDashboard(); });
+bulkEditBtn.addEventListener("click", () => {
+  draftSchedule = JSON.parse(JSON.stringify(scheduleData));
+  navigateTo("review");
+});
+openDesignFromPopBtn.addEventListener("click", () => navigateTo("board"));
+
+// Day Chips + "Today" Quick-Jump
 dayFilterPills.addEventListener("click", (e) => {
-  const btn = e.target.closest(".pill-btn");
+  const btn = e.target.closest("[data-day]");
   if (!btn) return;
   activeDayFilter = btn.dataset.day;
-  dayFilterPills.querySelectorAll(".pill-btn").forEach((b) => b.classList.remove("active"));
-  btn.classList.add("active");
+  dayFilterPills.querySelectorAll("[data-day]").forEach((b) => b.classList.toggle("active", b === btn));
   renderDashboard();
+});
+
+jumpTodayChip.addEventListener("click", () => {
+  const todayKey = JS_DAY_TO_KEY[new Date().getDay()];
+  mobileDayKey = todayKey;
+  activeDayFilter = todayKey;
+  dayFilterPills.querySelectorAll("[data-day]").forEach((b) => b.classList.toggle("active", b.dataset.day === todayKey));
+  renderDashboard();
+  showToast(`Jumped to Today (${DAY_NAMES_FULL[todayKey]}).`, "info");
 });
 
 /* ==========================================================================
@@ -2039,7 +1424,7 @@ dayFilterPills.addEventListener("click", (e) => {
    ========================================================================== */
 function buildClassModalSwatches() {
   colorSwatches.innerHTML = "";
-  ["#4f46e5", "#7c3aed", "#2563eb", "#0891b2", "#059669", "#d97706", "#ea580c", "#e11d48", "#db2777", "#1e293b"].forEach((hex) => {
+  SUBJECT_PALETTE.forEach((hex) => {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "color-swatch";
@@ -2072,14 +1457,14 @@ function openClassModal(index = -1) {
     cStart.value = cls.start;
     cEnd.value = cls.end;
     boxes.forEach((b) => (b.checked = cls.days.includes(b.value)));
-    selectClassColor(cls.color || "#4f46e5");
+    selectClassColor(cls.color || SUBJECT_PALETTE[0]);
     deleteClassBtn.classList.remove("hidden");
   } else {
     modalTitle.textContent = "Add New Class";
     classForm.reset();
     cStart.value = "09:00";
     cEnd.value = "10:30";
-    selectClassColor(COLOR_PALETTES.aesthetic.colors[(scheduleData?.classes.length || 0) % 8]);
+    selectClassColor(SUBJECT_PALETTE[(scheduleData?.classes.length || 0) % SUBJECT_PALETTE.length]);
     deleteClassBtn.classList.add("hidden");
   }
   classModal.classList.remove("hidden");
@@ -2096,9 +1481,7 @@ function checkModalLiveOverlap() {
   scheduleData.classes.forEach((c, i) => {
     if (i === idx) return;
     const shared = c.days.filter((d) => days.includes(d));
-    if (shared.length && s < toMinutes(c.end) && toMinutes(c.start) < e) {
-      hits.push(`${c.code} (${shared.join(", ")})`);
-    }
+    if (shared.length && s < toMinutes(c.end) && toMinutes(c.start) < e) hits.push(`${c.code} (${shared.join(", ")})`);
   });
   if (hits.length) {
     modalOverlapWarn.textContent = `Overlaps with: ${hits.join("; ")}`;
@@ -2111,6 +1494,7 @@ function checkModalLiveOverlap() {
 document.querySelectorAll("#dayCheckboxes input").forEach((cb) => cb.addEventListener("change", checkModalLiveOverlap));
 
 addClassBtn.addEventListener("click", () => openClassModal(-1));
+fabAddClass.addEventListener("click", () => openClassModal(-1));
 closeModalBtn.addEventListener("click", () => classModal.classList.add("hidden"));
 closeModalX.addEventListener("click", () => classModal.classList.add("hidden"));
 
@@ -2125,8 +1509,7 @@ classForm.addEventListener("submit", (e) => {
 
   const entry = {
     code, title: cTitle.value.trim(), room: cRoom.value.trim(),
-    start: cStart.value, end: cEnd.value, days, color: cColor.value || "#4f46e5",
-    uncertain: false, note: ""
+    start: cStart.value, end: cEnd.value, days, color: cColor.value || SUBJECT_PALETTE[0], uncertain: false
   };
   const idx = Number(editIndex.value);
   if (idx >= 0) scheduleData.classes[idx] = entry;
@@ -2134,10 +1517,8 @@ classForm.addEventListener("submit", (e) => {
 
   saveSchedule();
   classModal.classList.add("hidden");
-  renderSubjectColorsList();
   renderDashboard();
-  pushHistory();
-  showToast(idx >= 0 ? `Updated ${code}.` : `Added ${code}.`, "success");
+  showSuccessCheck(idx >= 0 ? "Class updated!" : "Class added!");
 });
 
 deleteClassBtn.addEventListener("click", () => {
@@ -2148,70 +1529,57 @@ deleteClassBtn.addEventListener("click", () => {
     scheduleData.classes.splice(idx, 1);
     saveSchedule();
     classModal.classList.add("hidden");
-    renderSubjectColorsList();
     renderDashboard();
-    pushHistory();
     showToast(`Deleted ${code}.`, "info");
   });
 });
 
 /* ==========================================================================
-   EXPORT (HIGH-RES PNG, PDF, & PRINT PRESERVING ALL CUSTOM STYLES)
+   EXPORT (PNG, PDF, PRINT) + SUCCESS CHECKMARK
    ========================================================================== */
 function openExportModal() {
-  if (!scheduleData) {
-    showToast("Create or upload a schedule before exporting.", "info");
-    return;
-  }
-  const matchLayout = ["grid", "cards", "compact", "minimal"].includes(design.layout) ? design.layout : "grid";
-  const radio = exportModal.querySelector(`input[name="exportLayout"][value="${matchLayout}"]`);
+  const radio = exportModal.querySelector(`input[name="exportLayout"][value="${activeView}"]`);
   if (radio) radio.checked = true;
   exportModal.classList.remove("hidden");
 }
+openExportBtn.addEventListener("click", openExportModal);
 closeExportX.addEventListener("click", () => exportModal.classList.add("hidden"));
-printPreviewBtn.addEventListener("click", () => window.print());
 
-async function captureStyledCanvas(layout) {
-  const prevLayout = design.layout;
-  const prevCustOpen = isCustomizeOpen;
-  if (prevCustOpen && window.innerWidth < 960) customizePanel.classList.add("hidden");
-
-  design.layout = layout;
+async function captureTimetableCanvas(layout) {
+  const prevView = activeView;
+  const prevFilter = activeDayFilter;
+  activeView = layout;
+  activeDayFilter = "ALL";
   renderDashboard();
 
   const prevOverflow = gridView.style.overflowX;
   const prevWidth = captureArea.style.width;
-  if (layout === "grid" || layout === "compact") {
+  if (layout === "grid") {
+    mobileDayRailHeader.classList.add("hidden");
+    renderWeeklyGrid(getFilteredClasses(), getVisibleDays(), detectConflicts(scheduleData.classes).conflictingIndices, true);
     gridView.style.overflowX = "visible";
-    captureArea.style.width = `${Math.max(captureArea.scrollWidth, 1100)}px`;
+    captureArea.style.width = `${Math.max(captureArea.scrollWidth, 1080)}px`;
   }
 
-  await new Promise((r) => setTimeout(r, 150));
+  if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  await new Promise((r) => setTimeout(r, 140));
 
-  const scale = Number(exportQuality.value) || 2;
-  const canvas = await html2canvas(captureArea, {
-    scale,
-    useCORS: true,
-    backgroundColor: design.useGradient ? null : design.bgColor
-  });
+  const bgColor = getComputedStyle(captureArea).backgroundColor || "#ffffff";
+  const canvas = await html2canvas(captureArea, { scale: 2, useCORS: true, backgroundColor: bgColor });
 
   gridView.style.overflowX = prevOverflow;
   captureArea.style.width = prevWidth;
-  design.layout = prevLayout;
+  activeView = prevView;
+  activeDayFilter = prevFilter;
   renderDashboard();
-  if (prevCustOpen && window.innerWidth < 960) customizePanel.classList.remove("hidden");
   return canvas;
 }
 
-function getChosenExportLayout() {
-  return exportModal.querySelector('input[name="exportLayout"]:checked')?.value || "grid";
-}
-
 exportPngBtn.addEventListener("click", async () => {
-  const layout = getChosenExportLayout();
+  const layout = exportModal.querySelector('input[name="exportLayout"]:checked')?.value || "grid";
   exportPngBtn.disabled = true;
   try {
-    const canvas = await captureStyledCanvas(layout);
+    const canvas = await captureTimetableCanvas(layout);
     const link = document.createElement("a");
     link.download = `SchedSnap-${layout}.png`;
     link.href = canvas.toDataURL("image/png");
@@ -2219,65 +1587,60 @@ exportPngBtn.addEventListener("click", async () => {
     link.click();
     link.remove();
     exportModal.classList.add("hidden");
-    showToast("High-res PNG downloaded!", "success");
+    showSuccessCheck("PNG Exported!");
   } catch {
-    showToast("PNG export failed. Try Standard resolution on mobile.", "error");
+    showToast("Failed to export PNG. Please try again.", "error");
   } finally {
     exportPngBtn.disabled = false;
   }
 });
 
 exportPdfBtn.addEventListener("click", async () => {
-  const layout = getChosenExportLayout();
+  const layout = exportModal.querySelector('input[name="exportLayout"]:checked')?.value || "grid";
   exportPdfBtn.disabled = true;
   try {
-    const canvas = await captureStyledCanvas(layout);
+    const canvas = await captureTimetableCanvas(layout);
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({
-      orientation: canvas.width >= canvas.height ? "landscape" : "portrait",
-      unit: "pt",
-      format: "a4"
-    });
-    const pw = pdf.internal.pageSize.getWidth();
-    const ph = pdf.internal.pageSize.getHeight();
-    const m = 24;
+    const pdf = new jsPDF({ orientation: canvas.width >= canvas.height ? "landscape" : "portrait", unit: "pt", format: "a4" });
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight(), m = 24;
     const ratio = Math.min((pw - m * 2) / canvas.width, (ph - m * 2) / canvas.height);
-    const rw = canvas.width * ratio;
-    const rh = canvas.height * ratio;
-    pdf.addImage(canvas.toDataURL("image/png"), "PNG", (pw - rw) / 2, (ph - rh) / 2, rw, rh);
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", (pw - canvas.width * ratio) / 2, (ph - canvas.height * ratio) / 2, canvas.width * ratio, canvas.height * ratio);
     pdf.save(`SchedSnap-${layout}.pdf`);
     exportModal.classList.add("hidden");
-    showToast("PDF timetable downloaded!", "success");
+    showSuccessCheck("PDF Exported!");
   } catch {
-    showToast("PDF export failed. Please try again.", "error");
+    showToast("Failed to export PDF. Please try again.", "error");
   } finally {
     exportPdfBtn.disabled = false;
   }
 });
 
 exportPrintBtn.addEventListener("click", () => {
-  const layout = getChosenExportLayout();
+  const layout = exportModal.querySelector('input[name="exportLayout"]:checked')?.value || "grid";
   exportModal.classList.add("hidden");
-  design.layout = layout;
+  activeView = layout;
   renderDashboard();
-  setTimeout(() => window.print(), 180);
+  setTimeout(() => window.print(), 160);
 });
 
 [classModal, exportModal, confirmModal].forEach((m) => {
   m.addEventListener("click", (e) => { if (e.target === m) m.classList.add("hidden"); });
 });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    classModal.classList.add("hidden");
+    exportModal.classList.add("hidden");
+    confirmModal.classList.add("hidden");
+    viewOptionsPopover.classList.add("hidden");
+  }
+});
 
-
-if (navBoardBtn) navBoardBtn.addEventListener("click", () => navigateTo("board"));
-if (mobBoardBtn) mobBoardBtn.addEventListener("click", () => navigateTo("board"));
-if (openDesignBoardBtn) openDesignBoardBtn.addEventListener("click", () => navigateTo("board"));
-
-// Shared read-only bridge for Design Board (avoids duplicating schedule data)
+// Shared read-only bridge for Phase 5: Design Board
 window.SchedSnapAPI = {
   getSchedule: () => scheduleData,
   navigateTo,
   showToast,
-  formatTime
+  formatTime: format12h
 };
 
 init();

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SchedSnap — Visual Schedule Builder</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Used only for the Download PNG button -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body data-theme="gold">
+  <header class="navbar">
+    <div class="brand">
+      <span class="brand-logo">📅</span>
+      <h1>SchedSnap</h1>
+    </div>
+    <div class="api-bar">
+      <input type="password" id="apiKeyInput" placeholder="Paste Gemini API Key..." />
+      <button id="saveKeyBtn" class="btn btn-secondary">Save Key</button>
+      <span id="keyStatus" class="key-status"></span>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- UPLOAD / CAPTURE SECTION -->
+    <section class="upload-section" id="uploadSection">
+      <h2>Turn your schedule photo into a clean timetable</h2>
+      <p class="subtitle">Upload a screenshot or take a photo of your enrollment form to generate an editable visual schedule.</p>
+
+      <div class="drop-zone" id="dropZone">
+        <p>Drag & drop your schedule image here, or choose an option below</p>
+        <div class="upload-actions">
+          <label class="btn btn-primary">
+            Upload Photo
+            <input type="file" id="fileInput" accept="image/*" hidden />
+          </label>
+          <label class="btn btn-secondary">
+            Take a Photo
+            <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden />
+          </label>
+          <button id="sampleBtn" class="btn btn-outline">Try Sample Schedule</button>
+        </div>
+      </div>
+
+      <div class="preview-box hidden" id="previewBox">
+        <div class="preview-img-wrap">
+          <img id="previewImg" alt="Schedule preview" />
+        </div>
+        <div class="preview-controls">
+          <button id="rotateBtn" class="btn btn-secondary">↻ Rotate 90°</button>
+          <button id="clearImgBtn" class="btn btn-outline">Remove</button>
+          <button id="scanBtn" class="btn btn-primary">Generate Schedule</button>
+        </div>
+        <p id="scanStatus" class="scan-status"></p>
+      </div>
+    </section>
+
+    <!-- SCHEDULE STUDIO SECTION -->
+    <section class="studio-section hidden" id="studioSection">
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <label for="themeSelect">Theme:</label>
+          <select id="themeSelect">
+            <option value="gold">Gold & Charcoal</option>
+            <option value="light">Minimalist Light</option>
+            <option value="dev">Dark Dev Mode</option>
+            <option value="pastel">Soft Pastel</option>
+          </select>
+
+          <button id="viewGridBtn" class="btn btn-secondary active">Weekly Grid</button>
+          <button id="viewCardsBtn" class="btn btn-secondary">Day Cards</button>
+        </div>
+
+        <div class="toolbar-group">
+          <button id="addClassBtn" class="btn btn-secondary">+ Add Class</button>
+          <button id="downloadPngBtn" class="btn btn-primary">Download PNG</button>
+          <button id="printBtn" class="btn btn-secondary">Print / PDF</button>
+          <button id="resetBtn" class="btn btn-outline">New Scan</button>
+        </div>
+      </div>
+
+      <!-- EXPORTABLE TIMETABLE CARD -->
+      <div class="capture-area" id="captureArea">
+        <div class="schedule-header">
+          <div>
+            <div class="inst-name" id="headerInstitution" contenteditable="true">Institution Name</div>
+            <h2 class="sched-title" id="headerTitle" contenteditable="true">Class Schedule</h2>
+          </div>
+          <div class="sched-meta" id="headerMeta" contenteditable="true">Student Name • Section • Term</div>
+        </div>
+
+        <div id="gridView" class="grid-view"></div>
+        <div id="cardsView" class="cards-view hidden"></div>
+      </div>
+      <p class="hint">Tip: Click any class block to edit or delete it. Click the header text to rename it.</p>
+    </section>
+  </main>
+
+  <!-- ADD / EDIT CLASS MODAL -->
+  <div class="modal-backdrop hidden" id="classModal">
+    <div class="modal">
+      <h3 id="modalTitle">Edit Class</h3>
+      <form id="classForm">
+        <input type="hidden" id="editIndex" />
+        <label>Course Code
+          <input type="text" id="cCode" placeholder="e.g. ITE 012" required />
+        </label>
+        <label>Course Title
+          <input type="text" id="cTitle" placeholder="e.g. Computer Programming 2" />
+        </label>
+        <label>Room
+          <input type="text" id="cRoom" placeholder="e.g. Q-5312" />
+        </label>
+        <div class="time-row">
+          <label>Start Time
+            <input type="time" id="cStart" required />
+          </label>
+          <label>End Time
+            <input type="time" id="cEnd" required />
+          </label>
+        </div>
+        <fieldset class="days-fieldset">
+          <legend>Days</legend>
+          <div class="day-checks" id="dayCheckboxes">
+            <label><input type="checkbox" value="Mon" /> Mon</label>
+            <label><input type="checkbox" value="Tue" /> Tue</label>
+            <label><input type="checkbox" value="Wed" /> Wed</label>
+            <label><input type="checkbox" value="Thu" /> Thu</label>
+            <label><input type="checkbox" value="Fri" /> Fri</label>
+            <label><input type="checkbox" value="Sat" /> Sat</label>
+            <label><input type="checkbox" value="Sun" /> Sun</label>
+          </div>
+        </fieldset>
+        <div class="modal-actions">
+          <button type="button" id="deleteClassBtn" class="btn btn-danger">Delete</button>
+          <div class="modal-right">
+            <button type="button" id="closeModalBtn" class="btn btn-outline">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

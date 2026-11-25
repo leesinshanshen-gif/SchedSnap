@@ -32,7 +32,8 @@ let activeDayFilter = "ALL";
 let mobileDayKey = JS_DAY_TO_KEY[new Date().getDay()] || "Mon";
 let searchQuery = "";
 let showFreeTime = true;
-let showWeekends = true;
+let showWeekends = false;
+let userToggledWeekends = false;
 let hasAnimatedStats = false;
 let currentStep = "upload"; // "upload" | "review" | "dashboard" | "board"
 let confirmCallback = null;
@@ -44,7 +45,6 @@ const stepReviewBtn = document.getElementById("stepReviewBtn");
 const stepTimetableBtn = document.getElementById("stepTimetableBtn");
 const stepExportBtn = document.getElementById("stepExportBtn");
 const navDesignBtn = document.getElementById("navDesignBtn");
-const navExportPrimaryBtn = document.getElementById("navExportPrimaryBtn");
 
 const mobScanBtn = document.getElementById("mobScanBtn");
 const mobTimetableBtn = document.getElementById("mobTimetableBtn");
@@ -103,6 +103,7 @@ const confirmScheduleBtn = document.getElementById("confirmScheduleBtn");
 const reviewSummaryStats = document.getElementById("reviewSummaryStats");
 const reviewAddRowBtn = document.getElementById("reviewAddRowBtn");
 const reviewMobileTabs = document.getElementById("reviewMobileTabs");
+const reviewSplitLayout = document.getElementById("reviewSplitLayout");
 const reviewImagePane = document.getElementById("reviewImagePane");
 const reviewResultsPane = document.getElementById("reviewResultsPane");
 const reviewSourceImg = document.getElementById("reviewSourceImg");
@@ -183,7 +184,9 @@ const exportModal = document.getElementById("exportModal");
 const closeExportX = document.getElementById("closeExportX");
 const exportPngBtn = document.getElementById("exportPngBtn");
 const exportPdfBtn = document.getElementById("exportPdfBtn");
+const exportIcsBtn = document.getElementById("exportIcsBtn");
 const exportPrintBtn = document.getElementById("exportPrintBtn");
+const exportToWallpaperBtn = document.getElementById("exportToWallpaperBtn");
 
 const confirmModal = document.getElementById("confirmModal");
 const confirmTitle = document.getElementById("confirmTitle");
@@ -198,6 +201,20 @@ const toastContainer = document.getElementById("toastContainer");
 /* ==========================================================================
    INITIALIZATION
    ========================================================================== */
+
+const STEP_TO_HASH = { upload: "#/scan", review: "#/review", dashboard: "#/timetable", board: "#/wallpaper" };
+const HASH_TO_STEP = { "#/scan": "upload", "#/review": "review", "#/timetable": "dashboard", "#/wallpaper": "board" };
+let suppressHashSync = false;
+
+function syncWeekendVisibility() {
+  if (userToggledWeekends || !scheduleData) return;
+  const hasWeekendClass = (scheduleData.classes || []).some((c) =>
+    c.days.includes("Sat") || c.days.includes("Sun")
+  );
+  showWeekends = hasWeekendClass;
+  if (toggleWeekends) toggleWeekends.checked = showWeekends;
+}
+
 function init() {
   buildClassModalSwatches();
 
@@ -217,7 +234,16 @@ function init() {
     }
   }
 
-  navigateTo("upload");
+  syncWeekendVisibility();
+  const initialStep = HASH_TO_STEP[window.location.hash] || "upload";
+  navigateTo(initialStep, { updateHash: true });
+
+  window.addEventListener("hashchange", () => {
+    if (suppressHashSync) return;
+    const target = HASH_TO_STEP[window.location.hash] || "upload";
+    if (target !== currentStep) navigateTo(target, { updateHash: false });
+  });
+
   updateLiveStatus();
   setInterval(updateLiveStatus, 30000);
   setupMobileSwipeOnGrid();
@@ -242,9 +268,9 @@ function updateStepperUI() {
   const hasTimetable = Boolean(scheduleData && scheduleData.classes.length);
 
   const steps = [
-    { el: stepScanBtn, key: "upload", unlocked: true, completed: currentStep !== "upload" },
-    { el: stepReviewBtn, key: "review", unlocked: hasReview, completed: hasTimetable && currentStep === "dashboard" },
-    { el: stepTimetableBtn, key: "dashboard", unlocked: hasTimetable, completed: false },
+    { el: stepScanBtn, key: "upload", unlocked: true, completed: hasReview || hasTimetable },
+    { el: stepReviewBtn, key: "review", unlocked: hasReview, completed: hasTimetable },
+    { el: stepTimetableBtn, key: "dashboard", unlocked: hasTimetable, completed: hasTimetable && currentStep === "board" },
     { el: stepExportBtn, key: "export", unlocked: hasTimetable, completed: false }
   ];
 
@@ -255,14 +281,17 @@ function updateStepperUI() {
     s.el.setAttribute("aria-disabled", String(!s.unlocked));
   });
 
-  navExportPrimaryBtn.classList.toggle("hidden", !hasTimetable || currentStep === "upload");
+  if (navDesignBtn) {
+    navDesignBtn.classList.toggle("btn-studio-active", currentStep === "board");
+    navDesignBtn.setAttribute("aria-pressed", String(currentStep === "board"));
+  }
 
   document.querySelectorAll(".mob-nav-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.mob === currentStep);
   });
 }
 
-function navigateTo(target) {
+function navigateTo(target, opts = { updateHash: true }) {
   viewOptionsPopover.classList.add("hidden");
   viewOptionsBtn.setAttribute("aria-expanded", "false");
 
@@ -307,6 +336,11 @@ function navigateTo(target) {
     }
   }
 
+  if (opts.updateHash !== false && STEP_TO_HASH[currentStep] && window.location.hash !== STEP_TO_HASH[currentStep]) {
+    suppressHashSync = true;
+    window.location.hash = STEP_TO_HASH[currentStep];
+    setTimeout(() => { suppressHashSync = false; }, 0);
+  }
   updateStepperUI();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -324,7 +358,6 @@ stepExportBtn.addEventListener("click", () => {
   if (!stepExportBtn.classList.contains("locked")) navigateTo("export");
 });
 navDesignBtn.addEventListener("click", () => navigateTo("board"));
-navExportPrimaryBtn.addEventListener("click", () => navigateTo("export"));
 openSavedBtn.addEventListener("click", () => navigateTo("dashboard"));
 
 mobScanBtn.addEventListener("click", () => navigateTo("upload"));
@@ -335,16 +368,32 @@ mobExportBtn.addEventListener("click", () => navigateTo("export"));
 /* ==========================================================================
    TOASTS, CONFIRM DIALOG, & SUCCESS CHECKMARK MICRO-ANIMATION
    ========================================================================== */
-function showToast(message, type = "info") {
+function showToast(message, type = "info", action = null) {
   const el = document.createElement("div");
   el.className = `toast toast-${type}`;
-  el.textContent = message;
+  const span = document.createElement("span");
+  span.textContent = message;
+  el.appendChild(span);
+
+  if (action && action.label && typeof action.onClick === "function") {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "toast-action-btn";
+    btn.textContent = action.label;
+    btn.addEventListener("click", () => {
+      action.onClick();
+      el.remove();
+    });
+    el.appendChild(btn);
+  }
+
   toastContainer.appendChild(el);
   setTimeout(() => {
+    if (!el.isConnected) return;
     el.style.opacity = "0";
     el.style.transition = "opacity 0.22s";
     setTimeout(() => el.remove(), 220);
-  }, 2800);
+  }, action ? 4500 : 2800);
 }
 
 function showSuccessCheck(label = "Saved!") {
@@ -715,6 +764,7 @@ function loadSampleSchedule() {
     ]
   });
   saveSchedule();
+  syncWeekendVisibility();
   navigateTo("dashboard");
   showToast("Sample schedule loaded.", "success");
 }
@@ -798,7 +848,10 @@ function openReviewStep(data) {
   revTitle.value = draftSchedule.title || "";
   revMeta.value = draftSchedule.meta || "";
 
-  if (lastScannedDataUrl) {
+  const hasSource = Boolean(lastScannedDataUrl);
+  reviewSplitLayout.classList.toggle("no-source", !hasSource);
+  reviewMobileTabs.classList.toggle("hidden", !hasSource);
+  if (hasSource) {
     reviewSourceImg.src = lastScannedDataUrl;
     reviewSourceImg.classList.remove("hidden");
     reviewImgEmpty.classList.add("hidden");
@@ -845,17 +898,30 @@ function renderReviewRows() {
       </label>
     `).join("");
 
+    const warnReasons = [];
+    if (!codeOk) warnReasons.push("missing code");
+    if (!roomOk) warnReasons.push("missing room");
+    if (!timeOk) warnReasons.push("check time");
+    if (!daysOk) warnReasons.push("select day");
+    const statusLabel = isUncertain
+      ? (warnReasons.length ? `Needs review: ${warnReasons.join(", ")}` : "Check OCR entry")
+      : "Ready";
+
     card.innerHTML = `
       <div class="review-row-top">
-        <span class="conf-badge ${isUncertain ? "check" : "ok"}">${isUncertain ? "Check entry" : "OK"}</span>
+        <span class="conf-badge ${isUncertain ? "check" : "ok"}">${escapeHtml(statusLabel)}</span>
         <div class="review-row-actions">
+          <label class="rev-color-picker-wrap" title="Subject color">
+            <span>Color</span>
+            <input type="color" class="rev-color-input" data-idx="${idx}" value="${escapeHtml(cls.color || SUBJECT_PALETTE[idx % SUBJECT_PALETTE.length])}" aria-label="Course color" />
+          </label>
           ${isUncertain ? `<button type="button" class="btn btn-secondary btn-sm rev-ok-btn" data-idx="${idx}">Looks good</button>` : ""}
           <button type="button" class="btn btn-ghost btn-sm text-danger rev-del-btn" data-idx="${idx}">Remove</button>
         </div>
       </div>
       <div class="review-fields-grid">
         <div class="form-field" style="margin:0;">
-          <label>Code <span class="conf-badge ${codeOk ? "ok" : "check"}">${codeOk ? "OK" : "Check"}</span></label>
+          <label>Course Code</label>
           <input type="text" class="rev-input" data-idx="${idx}" data-field="code" value="${escapeHtml(cls.code)}" placeholder="CS 101" />
         </div>
         <div class="form-field" style="margin:0;">
@@ -863,11 +929,11 @@ function renderReviewRows() {
           <input type="text" class="rev-input" data-idx="${idx}" data-field="title" value="${escapeHtml(cls.title)}" placeholder="Course name" />
         </div>
         <div class="form-field" style="margin:0;">
-          <label>Room <span class="conf-badge ${roomOk ? "ok" : "check"}">${roomOk ? "OK" : "Check"}</span></label>
+          <label>Room</label>
           <input type="text" class="rev-input" data-idx="${idx}" data-field="room" value="${escapeHtml(cls.room)}" placeholder="Room" />
         </div>
         <div class="form-field" style="margin:0;">
-          <label>Start <span class="conf-badge ${timeOk ? "ok" : "check"}">${timeOk ? "OK" : "Check"}</span></label>
+          <label>Start</label>
           <input type="time" class="rev-input" data-idx="${idx}" data-field="start" value="${escapeHtml(cls.start)}" />
         </div>
         <div class="form-field" style="margin:0;">
@@ -922,11 +988,26 @@ function renderReviewRows() {
       showToast("Marked as confirmed.", "success");
     });
   });
+  reviewRowsContainer.querySelectorAll(".rev-color-input").forEach((inp) => {
+    inp.addEventListener("click", (e) => e.stopPropagation());
+    inp.addEventListener("input", (e) => {
+      const i = Number(e.target.dataset.idx);
+      draftSchedule.classes[i].color = e.target.value;
+    });
+  });
   reviewRowsContainer.querySelectorAll(".rev-del-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      draftSchedule.classes.splice(Number(e.target.dataset.idx), 1);
+      const idx = Number(e.target.dataset.idx);
+      const removed = draftSchedule.classes.splice(idx, 1)[0];
       renderReviewRows();
+      showToast(`Removed ${removed.code || "course"}.`, "info", {
+        label: "Undo",
+        onClick: () => {
+          draftSchedule.classes.splice(idx, 0, removed);
+          renderReviewRows();
+        }
+      });
     });
   });
 }
@@ -955,6 +1036,7 @@ function confirmAndGenerateTimetable() {
 
   scheduleData = normalizeSchedule(draftSchedule);
   saveSchedule();
+  syncWeekendVisibility();
   hasAnimatedStats = false;
   navigateTo("dashboard");
   showSuccessCheck("Timetable ready!");
@@ -1394,7 +1476,7 @@ document.addEventListener("click", (e) => {
 });
 
 toggleFreeTime.addEventListener("change", (e) => { showFreeTime = e.target.checked; renderDashboard(); });
-toggleWeekends.addEventListener("change", (e) => { showWeekends = e.target.checked; renderDashboard(); });
+toggleWeekends.addEventListener("change", (e) => { userToggledWeekends = true; showWeekends = e.target.checked; renderDashboard(); });
 bulkEditBtn.addEventListener("click", () => {
   draftSchedule = JSON.parse(JSON.stringify(scheduleData));
   navigateTo("review");
@@ -1642,5 +1724,73 @@ window.SchedSnapAPI = {
   showToast,
   formatTime: format12h
 };
+
+
+// Calendar (.ics) Export for Google Calendar, Apple Calendar, & Outlook
+function generateIcsContent(sched) {
+  const dayToIcs = { Mon: "MO", Tue: "TU", Wed: "WE", Thu: "TH", Fri: "FR", Sat: "SA", Sun: "SU" };
+  const dayToJs = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const now = new Date();
+  const stamp = `${now.getUTCFullYear()}${pad2(now.getUTCMonth() + 1)}${pad2(now.getUTCDate())}T${pad2(now.getUTCHours())}${pad2(now.getUTCMinutes())}00Z`;
+
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//SchedSnap//Student Timetable//EN",
+    "CALSCALE:GREGORIAN"
+  ];
+
+  (sched.classes || []).forEach((cls, idx) => {
+    if (!cls.days || !cls.days.length) return;
+    const byDay = cls.days.map((d) => dayToIcs[d]).filter(Boolean).join(",");
+    const targetJsDay = dayToJs[cls.days[0]];
+    const firstDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diff = (targetJsDay - firstDate.getDay() + 7) % 7;
+    firstDate.setDate(firstDate.getDate() + diff);
+
+    const ymd = `${firstDate.getFullYear()}${pad2(firstDate.getMonth() + 1)}${pad2(firstDate.getDate())}`;
+    const [sh, sm] = (cls.start || "08:00").split(":");
+    const [eh, em] = (cls.end || "09:00").split(":");
+
+    lines.push("BEGIN:VEVENT");
+    lines.push(`UID:schedsnap-${idx}-${Date.now()}@schedsnap.app`);
+    lines.push(`DTSTAMP:${stamp}`);
+    lines.push(`SUMMARY:${(cls.code + (cls.title ? " — " + cls.title : "")).replace(/[,;\n]/g, " ")}`);
+    if (cls.room) lines.push(`LOCATION:${cls.room.replace(/[,;\n]/g, " ")}`);
+    lines.push(`DTSTART:${ymd}T${sh}${sm}00`);
+    lines.push(`DTEND:${ymd}T${eh}${em}00`);
+    lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${byDay};COUNT=16`);
+    lines.push("END:VEVENT");
+  });
+
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+if (exportIcsBtn) {
+  exportIcsBtn.addEventListener("click", () => {
+    if (!scheduleData || !scheduleData.classes.length) return;
+    const ics = generateIcsContent(scheduleData);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "SchedSnap-Schedule.ics";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    exportModal.classList.add("hidden");
+    showSuccessCheck("Calendar (.ics) Exported!");
+  });
+}
+
+if (exportToWallpaperBtn) {
+  exportToWallpaperBtn.addEventListener("click", () => {
+    exportModal.classList.add("hidden");
+    navigateTo("board");
+  });
+}
 
 init();

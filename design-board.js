@@ -314,10 +314,13 @@
     rootEl.innerHTML = `
       <div class="db-topbar">
         <div class="db-topbar-title">
-          <h2>Design Board — Phone Wallpaper Studio</h2>
+          <div style="display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;margin-bottom:0.2rem;">
+            <button type="button" id="dbBackTimetableBtn" class="btn btn-secondary btn-sm" aria-label="Back to Timetable">← Back to Timetable</button>
+            <h2>Wallpaper Studio</h2>
+          </div>
           <p>Turn your SchedSnap timetable into a lock screen or home screen wallpaper.</p>
         </div>
-        <div class="db-topbar-actions">
+        <div id="dbTopActions" class="db-topbar-actions">
           <button type="button" id="dbUndoBtn" class="btn btn-secondary db-btn-44" aria-label="Undo wallpaper change" title="Undo" disabled>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
             <span>Undo</span>
@@ -327,6 +330,7 @@
             <span>Redo</span>
           </button>
           <button type="button" id="dbResetBtn" class="btn btn-danger-soft db-btn-44" aria-label="Reset wallpaper design">Reset</button>
+          <button type="button" id="dbTopDownloadBtn" class="btn btn-primary db-btn-44" aria-label="Download Wallpaper PNG">Download Wallpaper PNG</button>
         </div>
       </div>
 
@@ -385,7 +389,7 @@
             <button type="button" class="db-tool-tab" role="tab" data-tab="layout">Layout</button>
             <button type="button" class="db-tool-tab" role="tab" data-tab="bg">Background</button>
             <button type="button" class="db-tool-tab" role="tab" data-tab="style">Style &amp; Font</button>
-            <button type="button" class="db-tool-tab" role="tab" data-tab="elements">Text &amp; Icons</button>
+            <button type="button" class="db-tool-tab" role="tab" data-tab="elements">Text &amp; Stickers</button>
             <button type="button" class="db-tool-tab" role="tab" data-tab="export">Save &amp; Export</button>
           </div>
 
@@ -689,6 +693,12 @@
      EVENT BINDINGS
      ======================================================================== */
   function bindEvents() {
+    // Back to Timetable & Quick Download PNG
+    document.getElementById("dbBackTimetableBtn").addEventListener("click", () => {
+      if (window.SchedSnapAPI) window.SchedSnapAPI.navigateTo("dashboard");
+    });
+    document.getElementById("dbTopDownloadBtn").addEventListener("click", () => exportWallpaper("download"));
+
     // Empty state shortcuts
     document.getElementById("dbGoScanBtn").addEventListener("click", () => {
       if (window.SchedSnapAPI) window.SchedSnapAPI.navigateTo("upload");
@@ -1062,6 +1072,8 @@
     const hasClasses = Boolean(sched && Array.isArray(sched.classes) && sched.classes.length > 0);
     document.getElementById("dbEmptyState").classList.toggle("hidden", hasClasses);
     document.getElementById("dbWorkspace").classList.toggle("hidden", !hasClasses);
+    const topActs = document.getElementById("dbTopActions");
+    if (topActs) topActs.classList.toggle("hidden", !hasClasses);
     if (!hasClasses) return;
 
     const canvas = document.getElementById("dbCanvas");

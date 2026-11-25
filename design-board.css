@@ -491,9 +491,12 @@
 .db-widget-title {
   text-align: center;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  font-size: 1.15em;
+  font-size: 1.05em;
+  line-height: 1.25;
+  word-break: normal;
+  overflow-wrap: break-word;
   margin-bottom: 2px;
 }
 
@@ -527,11 +530,12 @@
 }
 
 .db-block {
-  padding: 4px 5px;
+  padding: 4px 4px;
   border-radius: var(--db-radius, 8px);
   line-height: 1.2;
   overflow: hidden;
-  word-break: break-word;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .db-block.block-sharp { border-radius: 2px !important; }
@@ -547,7 +551,7 @@
 
 .db-block-code { font-weight: 700; font-size: 0.9em; }
 .db-block-title { font-size: 0.76em; opacity: 0.9; }
-.db-block-meta { font-size: 0.72em; opacity: 0.82; margin-top: 1px; }
+.db-block-meta { font-size: 0.68em; opacity: 0.86; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Layout: Stacked Day List / Today / Next 3 / Minimal */
 .db-stack-list {
@@ -642,29 +646,32 @@
 }
 
 .db-tool-tabs {
-  display: flex;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border-bottom: 1px solid var(--border);
   background: var(--surface-subtle);
-  padding: 0.35rem;
-  gap: 0.3rem;
+  padding: 0.4rem;
+  gap: 0.35rem;
 }
 
 .db-tool-tab {
-  flex: 0 0 auto;
-  min-height: 44px;
-  padding: 0 0.85rem;
+  min-height: 40px;
+  padding: 0.35rem 0.45rem;
   border: none;
   border-radius: 8px;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: background 0.16s ease, color 0.16s ease;
 }
 
